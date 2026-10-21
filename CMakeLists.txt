@@ -15,7 +15,10 @@ add_executable(Guardians_of_the_Sun_Temple
         main.cpp
         src/core/Game.cpp
         src/core/InputManager.cpp
+        src/demo/CharacterShowcase.cpp
+        src/rendering/Animator.cpp
         src/rendering/Camera2D.cpp
+        src/rendering/CharacterRenderer.cpp
         src/rendering/Renderer2D.cpp
         src/rendering/ResourceManager.cpp
         src/rendering/Shader.cpp
@@ -62,6 +65,12 @@ endif ()
 
 include(CTest)
 if (BUILD_TESTING)
+    add_executable(animator_tests
+            tests/animator_tests.cpp
+            src/rendering/Animator.cpp
+    )
+    target_include_directories(animator_tests PRIVATE src)
+    add_test(NAME animator_tests COMMAND animator_tests)
     add_executable(world_geometry_tests
             tests/world_geometry_tests.cpp
             src/world/Battlefield.cpp
@@ -72,6 +81,8 @@ if (BUILD_TESTING)
     add_test(NAME world_geometry_tests COMMAND world_geometry_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(animator_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

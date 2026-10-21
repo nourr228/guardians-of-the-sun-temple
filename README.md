@@ -1,8 +1,10 @@
 # Guardians of the Sun Temple
 
-Modules 1 and 2 provide the C++20/OpenGL 3.3 engine and a themed four-lane battlefield. Guardian, enemy, economy, wave, and menu systems are planned for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-3 provide the C++20/OpenGL 3.3 engine, a four-lane battlefield, and six animated character models. Purchasing, entity health, combat, waves, and menus remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
+
+![Six character models](docs/characters-preview.png)
 
 ## Build and run
 
@@ -17,6 +19,9 @@ The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600
 - Move the mouse over a path to highlight its full playable area.
 - Left click a path to select or deselect it. Several paths can stay selected.
 - Escape pauses or resumes environment animation and lane selection.
+- F3 shows or hides the six-character animation showcase.
+- In the showcase, 1-7 selects Idle, Moving, Attacking, Jumping, Ducking, TakingDamage, or Dying. Unsupported poses stay Idle.
+- In the showcase, 0 resumes automatic pose cycling; H steps through visual health levels, and R restores full visual health.
 
 W, S, Up, and Down are already tracked by `InputManager`. They will control guardians in the guardian module.
 
@@ -28,14 +33,19 @@ World coordinates start at the upper-left corner. X increases to the right and Y
 
 `TempleEnvironment` renders layered sky, dunes, pyramids, lanes, sandstone details, moving sand, torch flames, obelisks, pillars, a sphinx, and palms. `HomeBase` renders the Sun Crystal shrine with a pulsing glow. The props from the free Egypt pack are credited in [ASSET_CREDITS.md](ASSET_CREDITS.md). The original ZIP remains untouched; only the files used by the scene were copied into `assets/environment/kimssuki/`.
 
+The six characters are built from code-drawn shapes and articulated parts, so Module 3 needs no new image assets. `CharacterRenderer::draw` accepts a character type, animator, feet position, facing, scale, and normalized health. Future entity systems will supply those values. The Stone Sentinel's Attacking pose is its shield activation, not a damage-dealing attack.
+
 ## Tests
 
-Build `world_geometry_tests` or run `ctest --test-dir cmake-build-debug --output-on-failure`. This checks lane hit testing, multiple selection, spawn and projectile coordinates, the home boundary, and mouse mapping through a resized high-DPI letterboxed viewport.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. `world_geometry_tests` checks lane and coordinate rules. `animator_tests` checks supported states, frame timing, loops, one-shot completion, transitions, and delta-time consistency.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
+
+For repeatable showcase captures, set `GOST_PREVIEW_STATE` to 0-6, optionally `GOST_PREVIEW_TIME` to seconds into that clip and `GOST_PREVIEW_DAMAGE` to 0-3, along with `GOST_CAPTURE_PATH`.
 
 ## Source layout
 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
-- `src/rendering/`: shader and texture ownership, indexed quad renderer, sprites, and orthographic camera.
+- `src/rendering/`: shader and texture ownership, indexed quads and polygon renderer, sprites, orthographic camera, character models, and animator.
 - `src/world/`: lane geometry and selection, shrine boundary, and temple environment.
+- `src/demo/`: character showcase for visual inspection.

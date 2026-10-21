@@ -30,12 +30,40 @@ Renderer2D::Renderer2D(Shader& shader) : shader_(shader) {
                           reinterpret_cast<const void*>(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
+
+    glGenVertexArrays(1, &polygonVao_);
+    glGenBuffers(1, &polygonVbo_);
+    glBindVertexArray(polygonVao_);
+    glBindBuffer(GL_ARRAY_BUFFER, polygonVbo_);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), nullptr);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
 }
 
 Renderer2D::~Renderer2D() {
+    if (polygonVbo_ != 0) glDeleteBuffers(1, &polygonVbo_);
+    if (polygonVao_ != 0) glDeleteVertexArrays(1, &polygonVao_);
     if (ebo_ != 0) glDeleteBuffers(1, &ebo_);
     if (vbo_ != 0) glDeleteBuffers(1, &vbo_);
     if (vao_ != 0) glDeleteVertexArrays(1, &vao_);
+}
+
+void Renderer2D::drawPolygon(const Camera2D& camera,
+                             std::span<const glm::vec2> vertices,
+                             glm::vec4 color) const {
+    if (vertices.size() < 3) return;
+    shader_.use();
+    shader_.setMatrix("uModel", glm::mat4(1.0f));
+    shader_.setMatrix("uViewProjection", camera.viewProjection());
+    shader_.setColor("uColor", color);
+    shader_.setInt("uUseTexture", 0);
+    glBindVertexArray(polygonVao_);
+    glBindBuffer(GL_ARRAY_BUFFER, polygonVbo_);
+    glBufferData(GL_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(vertices.size_bytes()),
+                 vertices.data(), GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, static_cast<GLsizei>(vertices.size()));
+    glBindVertexArray(0);
 }
 
 void Renderer2D::drawRect(const Camera2D& camera, glm::vec2 position,

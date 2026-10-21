@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include <GLFW/glfw3.h>
 
@@ -12,6 +13,7 @@ class SpriteRenderer;
 class Battlefield;
 class HomeBase;
 class TempleEnvironment;
+class CharacterShowcase;
 
 class Game {
 public:
@@ -38,5 +40,7 @@ private:
     std::unique_ptr<Battlefield> battlefield_;
     std::unique_ptr<HomeBase> homeBase_;
     std::unique_ptr<TempleEnvironment> environment_;
+    std::unique_ptr<CharacterShowcase> showcase_;
+    std::string windowTitle_;
     bool paused_ = false;
 };

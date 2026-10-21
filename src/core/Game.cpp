@@ -13,6 +13,7 @@
 #include <stb_image_write.h>
 
 #include "core/InputManager.h"
+#include "demo/CharacterShowcase.h"
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
 #include "rendering/ResourceManager.h"
@@ -31,6 +32,7 @@ Game::Game() = default;
 
 Game::~Game() {
     // Release GPU objects while the context is still current.
+    showcase_.reset();
     environment_.reset();
     battlefield_.reset();
     homeBase_.reset();
@@ -126,16 +128,40 @@ void Game::initialize() {
     homeBase_ = std::make_unique<HomeBase>();
     environment_ = std::make_unique<TempleEnvironment>();
     environment_->loadAssets(*resources_, assets);
+    showcase_ = std::make_unique<CharacterShowcase>(*renderer_);
+    if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
+        const int stateIndex = std::atoi(state);
+        if (stateIndex >= 0 && stateIndex <= 6) {
+            int damageStep = 0;
+            if (const char* damage = std::getenv("GOST_PREVIEW_DAMAGE")) {
+                damageStep = std::atoi(damage);
+            }
+            showcase_->openPreview(static_cast<AnimationState>(stateIndex),
+                                   damageStep);
+            if (const char* time = std::getenv("GOST_PREVIEW_TIME")) {
+                showcase_->update(std::max(0.0f, std::strtof(time, nullptr)));
+            }
+        }
+    }
 }
 
 void Game::update(float deltaTime) {
     if (input_->keyPressed(GLFW_KEY_ESCAPE)) paused_ = !paused_;
+    showcase_->handleInput(*input_);
+    const std::string nextTitle = showcase_->statusText();
+    if (nextTitle != windowTitle_) {
+        windowTitle_ = nextTitle;
+        glfwSetWindowTitle(window_, windowTitle_.c_str());
+    }
     const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
     battlefield_->updateHover(mouse);
     if (!paused_ && input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
         battlefield_->toggleSelectionAt(mouse);
     }
-    if (!paused_) environment_->update(deltaTime);
+    if (!paused_) {
+        environment_->update(deltaTime);
+        showcase_->update(deltaTime);
+    }
 }
 
 void Game::render() const {
@@ -152,6 +178,7 @@ void Game::render() const {
     homeBase_->render(*camera_, *renderer_, *sprites_, *resources_,
                       environment_->elapsedSeconds());
     environment_->renderForeground(*camera_, *renderer_, *sprites_, *resources_);
+    showcase_->render(*camera_, *battlefield_);
 
     if (paused_) {
         renderer_->drawRect(*camera_, {0, 0},

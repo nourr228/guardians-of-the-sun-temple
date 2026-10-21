@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. The engine and battlefield modules are implemented; combat and progression remain future work.
+This is the reference for module-by-module implementation. The engine, battlefield, and character visual modules are implemented; combat and progression remain future work.
 
 ## Sources and priority
 
@@ -88,7 +88,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
 - The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- No enemy, guardian, combat, coin, wave, menu, or cutscene system has been implemented yet.
+- No gameplay entity, combat, coin, wave, menu, or cutscene system has been implemented yet.
 
 ### Module 2 - Battlefield, Lanes, and Temple Environment
 
@@ -97,3 +97,11 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - `TempleEnvironment` layers a desert sunset, dunes, pyramids, sandstone lanes, hieroglyphic pillars, obelisks, sphinx, animated torches, palms, drifting sand, and debris. `HomeBase` renders the Sun Crystal shrine and glow.
 - Selected assets from the user-supplied `EgyptFree.zip` are copied into `assets/environment/kimssuki/`; credits and source are in `ASSET_CREDITS.md`. The original ZIP is unchanged.
 - `world_geometry_tests` covers lane hit testing, multiple selection, entry and projectile coordinates, home breach, and resize/DPI mouse mapping. The rendered scene was captured directly from OpenGL at 1000 x 600.
+
+### Module 3 - Character Modeling and Animation
+
+- `CharacterRenderer` draws six distinct, multi-part Egyptian fantasy models from code-drawn polygons, lines, ellipses, and rectangles. The existing indexed quad renderer now also supports a reusable dynamic polygon path.
+- `Animator` tracks state, frame count, frame duration, looping, completion, and explicit transitions. Each type supports its applicable poses. The Stone Sentinel uses Attacking for shield activation and has no movement, jump, or duck animation.
+- `CharacterRenderer::draw` accepts feet anchor, facing, scale, and normalized health. It applies a shared progressive red tint and a temporary taking-damage flash; it does not own HP or combat rules.
+- F3 opens a six-character visual showcase on the battlefield. The models can cycle poses automatically or be inspected manually with keys 1-7, and H previews health tint. No new external character art is needed.
+- `animator_tests` verifies clip timing, loops, one-shot completion, rejected states, and frame-rate-independent progress. OpenGL captures document the six models in `docs/characters-preview.png`.

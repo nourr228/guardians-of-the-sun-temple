@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <span>
 
 class Camera2D;
 class Shader;
@@ -23,6 +24,10 @@ public:
                      glm::vec2 position, glm::vec2 size,
                      glm::vec4 tint = glm::vec4(1.0f),
                      float rotationDegrees = 0.0f) const;
+    // Convex, filled polygon in world coordinates.
+    void drawPolygon(const Camera2D& camera,
+                     std::span<const glm::vec2> vertices,
+                     glm::vec4 color) const;
 
 private:
     void draw(const Camera2D& camera, glm::vec2 position, glm::vec2 size,
@@ -33,4 +38,6 @@ private:
     GLuint vao_ = 0;
     GLuint vbo_ = 0;
     GLuint ebo_ = 0;
+    GLuint polygonVao_ = 0;
+    GLuint polygonVbo_ = 0;
 };
