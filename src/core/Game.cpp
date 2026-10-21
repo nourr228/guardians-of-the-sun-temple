@@ -14,6 +14,7 @@
 
 #include "core/InputManager.h"
 #include "demo/CharacterShowcase.h"
+#include "demo/GuardianPractice.h"
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
 #include "rendering/ResourceManager.h"
@@ -33,6 +34,7 @@ Game::Game() = default;
 Game::~Game() {
     // Release GPU objects while the context is still current.
     showcase_.reset();
+    practice_.reset();
     environment_.reset();
     battlefield_.reset();
     homeBase_.reset();
@@ -129,6 +131,11 @@ void Game::initialize() {
     environment_ = std::make_unique<TempleEnvironment>();
     environment_->loadAssets(*resources_, assets);
     showcase_ = std::make_unique<CharacterShowcase>(*renderer_);
+    practice_ = std::make_unique<GuardianPractice>(*battlefield_, *renderer_);
+    if (std::getenv("GOST_PRACTICE_PREVIEW") != nullptr) {
+        practiceVisible_ = true;
+        practice_->openPreview();
+    }
     if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
         const int stateIndex = std::atoi(state);
         if (stateIndex >= 0 && stateIndex <= 6) {
@@ -147,20 +154,24 @@ void Game::initialize() {
 
 void Game::update(float deltaTime) {
     if (input_->keyPressed(GLFW_KEY_ESCAPE)) paused_ = !paused_;
-    showcase_->handleInput(*input_);
-    const std::string nextTitle = showcase_->statusText();
-    if (nextTitle != windowTitle_) {
-        windowTitle_ = nextTitle;
-        glfwSetWindowTitle(window_, windowTitle_.c_str());
-    }
+    if (input_->keyPressed(GLFW_KEY_F4)) practiceVisible_ = !practiceVisible_;
+    if (!practiceVisible_) showcase_->handleInput(*input_);
     const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
     battlefield_->updateHover(mouse);
     if (!paused_ && input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
         battlefield_->toggleSelectionAt(mouse);
     }
     if (!paused_) {
+        if (practiceVisible_) practice_->handleInput(*input_, *camera_);
         environment_->update(deltaTime);
-        showcase_->update(deltaTime);
+        if (practiceVisible_) practice_->update(deltaTime, *input_);
+        else showcase_->update(deltaTime);
+    }
+    const std::string nextTitle = practiceVisible_
+            ? practice_->statusText() : showcase_->statusText();
+    if (nextTitle != windowTitle_) {
+        windowTitle_ = nextTitle;
+        glfwSetWindowTitle(window_, windowTitle_.c_str());
     }
 }
 
@@ -178,7 +189,8 @@ void Game::render() const {
     homeBase_->render(*camera_, *renderer_, *sprites_, *resources_,
                       environment_->elapsedSeconds());
     environment_->renderForeground(*camera_, *renderer_, *sprites_, *resources_);
-    showcase_->render(*camera_, *battlefield_);
+    if (practiceVisible_) practice_->render(*camera_);
+    else showcase_->render(*camera_, *battlefield_);
 
     if (paused_) {
         renderer_->drawRect(*camera_, {0, 0},

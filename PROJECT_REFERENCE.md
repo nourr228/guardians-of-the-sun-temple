@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. The engine, battlefield, and character visual modules are implemented; combat and progression remain future work.
+This is the reference for module-by-module implementation. Modules 1-4 are implemented; final enemies, combat resolution, economy UI, waves, menus, and progression remain future work.
 
 ## Sources and priority
 
@@ -88,7 +88,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
 - The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- No gameplay entity, combat, coin, wave, menu, or cutscene system has been implemented yet.
+- The engine and rendering layer are reused by the later guardian module. Full enemy, coin collection, wave, menu, and cutscene systems are still future work.
 
 ### Module 2 - Battlefield, Lanes, and Temple Environment
 
@@ -102,6 +102,15 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 
 - `CharacterRenderer` draws six distinct, multi-part Egyptian fantasy models from code-drawn polygons, lines, ellipses, and rectangles. The existing indexed quad renderer now also supports a reusable dynamic polygon path.
 - `Animator` tracks state, frame count, frame duration, looping, completion, and explicit transitions. Each type supports its applicable poses. The Stone Sentinel uses Attacking for shield activation and has no movement, jump, or duck animation.
-- `CharacterRenderer::draw` accepts feet anchor, facing, scale, and normalized health. It applies a shared progressive red tint and a temporary taking-damage flash; it does not own HP or combat rules.
+- `CharacterRenderer::draw` accepts feet anchor, facing, scale, and normalized health. It applies a shared progressive red tint and a temporary taking-damage flash; guardian HP is now supplied by Module 4.
 - F3 opens a six-character visual showcase on the battlefield. The models can cycle poses automatically or be inspected manually with keys 1-7, and H previews health tint. No new external character art is needed.
 - `animator_tests` verifies clip timing, loops, one-shot completion, rejected states, and frame-rate-independent progress. OpenGL captures document the six models in `docs/characters-preview.png`.
+
+### Module 4 - Guardian Mechanics and Player Controls
+
+- `Guardian` stores unique ID, type, fixed lane, position/size, speed, 5/7/5 HP, action, attack timing, active/alive state, and its `Animator`. `GuardianManager` updates all guardians and Sun Arrows without depending on OpenGL. Friendly guardians can overlap and pass through each other.
+- `GuardianManager::tryPlace` checks lane and wallet before construction, commits the cost only after a guardian can be created, and leaves the wallet unchanged on failure. A wallet interface keeps final Module 7 economy separate. Temporary F4 practice values are Khopesh 10, Archer 20, Sentinel 30 Sun Coins, with 30 starting coins; these preserve the brief's 1x/2x/3x ratio and three starting melee purchases.
+- Khopesh and Archer walk right with delta time. An enemy target in the same lane stops movement on contact; movement resumes after its defeat. Khopesh requests 1 damage per close-range strike. Archer fires horizontally moving, 1-damage Sun Arrows whose collision checks only enemy targets. The target interface is ready for the later enemy system. The Sentinel stays at the defender anchor, activates its shield animation, and ignores jump/duck commands. Its actual attack interception/protection belongs to Module 6.
+- W/Up starts a timed jump for movable guardians in all selected lanes; holding S/Down ducks them after any jump ends. Unselected lanes do not receive these actions. Guardians do not change lanes. Health damage changes model tint, and lethal damage runs the defeat animation.
+- F4 opens the temporary Guardian Practice mode. Click to select lanes, hover a selected lane when several are selected, use 1/2/3 to choose Khopesh/Sentinel/Archer, P to place one, T to create a stationary training target, K to remove it, H to test one point of damage, and R to reset the 30-coin test wallet. Window title shows balance, selected type, cost, and the last action. The three small top markers are temporary card indicators. F3 showcase remains available outside practice mode.
+- `guardian_tests` covers failed purchase without charge, unique IDs, HP, movement timing, friendly overlap, selected-lane jump/duck, Sentinel immobility, melee stop/attack/resume, and arrows damaging targets without injuring friends. `docs/guardian-practice-preview.png` is a direct OpenGL capture of the practice scene.

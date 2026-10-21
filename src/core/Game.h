@@ -14,6 +14,7 @@ class Battlefield;
 class HomeBase;
 class TempleEnvironment;
 class CharacterShowcase;
+class GuardianPractice;
 
 class Game {
 public:
@@ -41,6 +42,8 @@ private:
     std::unique_ptr<HomeBase> homeBase_;
     std::unique_ptr<TempleEnvironment> environment_;
     std::unique_ptr<CharacterShowcase> showcase_;
+    std::unique_ptr<GuardianPractice> practice_;
     std::string windowTitle_;
     bool paused_ = false;
+    bool practiceVisible_ = false;
 };

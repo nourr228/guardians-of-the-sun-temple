@@ -16,6 +16,8 @@ add_executable(Guardians_of_the_Sun_Temple
         src/core/Game.cpp
         src/core/InputManager.cpp
         src/demo/CharacterShowcase.cpp
+        src/demo/GuardianPractice.cpp
+        src/entities/Guardian.cpp
         src/rendering/Animator.cpp
         src/rendering/Camera2D.cpp
         src/rendering/CharacterRenderer.cpp
@@ -24,6 +26,7 @@ add_executable(Guardians_of_the_Sun_Temple
         src/rendering/Shader.cpp
         src/rendering/SpriteRenderer.cpp
         src/rendering/Texture.cpp
+        src/systems/GuardianManager.cpp
         src/world/Battlefield.cpp
         src/world/HomeBase.cpp
         src/world/TempleEnvironment.cpp
@@ -79,10 +82,22 @@ if (BUILD_TESTING)
     target_include_directories(world_geometry_tests PRIVATE src)
     target_link_libraries(world_geometry_tests PRIVATE glm::glm)
     add_test(NAME world_geometry_tests COMMAND world_geometry_tests)
+    add_executable(guardian_tests
+            tests/guardian_tests.cpp
+            src/entities/Guardian.cpp
+            src/systems/GuardianManager.cpp
+            src/rendering/Animator.cpp
+            src/world/Battlefield.cpp
+    )
+    target_include_directories(guardian_tests PRIVATE src)
+    target_link_libraries(guardian_tests PRIVATE glm::glm)
+    add_test(NAME guardian_tests COMMAND guardian_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(animator_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(guardian_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()
