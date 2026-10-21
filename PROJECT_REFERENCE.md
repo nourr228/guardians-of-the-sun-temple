@@ -1,0 +1,91 @@
+# Guardians of the Sun Temple - project reference
+
+This is an analysis and planning reference for future module-by-module work. No gameplay implementation is included here.
+
+## Sources and priority
+
+- Assignment: `C:\Users\nourm\Downloads\DMET502 - 5 - Project 1 Description (Project) (1).pdf` (15 pages, DMET 502 Project 1, Winter 2026).
+- Theme: the user's **Guardians of the Sun Temple** description in this chat.
+- Use the assignment for required mechanics, counts, UI, and grading constraints; use the theme for names, story, setting, and visual identity. The sample diagrams are deliberately simplified and their coin numbers are explicitly described as inaccurate (pp. 3-7).
+- The assignment explicitly says that LLM/AI assistance is prohibited (p. 1). This is a course rule and a material submission risk; it is recorded here as a fact about the brief, not treated as an instruction from the user to the assistant.
+
+## Core concept
+
+The Kingdom of Ra is protected by the **Heart of the Sun**, shown as a Sun Crystal in a sacred shrine at the left edge of the battlefield. A cursed Pharaoh's army advances from the right to seize it. The player purchases guardians with Sun Coins and defeats three successive waves. Any enemy reaching the shrine causes immediate defeat. Defeating every enemy from all three waves causes victory. The scene uses four horizontal sandstone lanes, satisfying the assignment minimum of three (pp. 2-3, 10-11).
+
+## Required game flow and systems
+
+### Menus and opening (pp. 2, 13-14)
+
+1. Main Menu appears at launch: Start and Exit. Start plays the cutscene, then gameplay. Sound Settings is optional bonus.
+2. The opening cutscene lasts 10-20 seconds, is visibly animated, includes at least one guardian and one enemy interacting, introduces the Heart of the Sun and why it matters, and includes a short dialogue or interaction. Subtitles may support animation but cannot be the sole storytelling device.
+3. Escape during gameplay opens Pause Menu: Continue, Restart, Main Menu.
+4. Victory and defeat each show a menu with Restart and Main Menu. Theme art: restored glowing crystal on victory; corrupted, darkened shrine on defeat.
+
+### Lanes and controls (pp. 2-4, 7-8)
+
+- Four fixed horizontal lanes; characters never change lanes. Enemies spawn at the rightmost edge in a random lane and advance left. Moving guardians appear at the leftmost position of a selected lane and advance right even when there is no enemy.
+- All active characters begin their applicable attack or defense behavior on entry, even without an opposing character in the lane. When a guardian and enemy collide, both stop and keep fighting until one is defeated. A stationary defender is the exception to guardian movement.
+- Hover highlights an entire lane. Left click toggles lane selection; multiple lanes may stay selected. The player selects an active guardian card to purchase/place a guardian in a selected lane.
+- W/Up makes all movable guardians in selected lanes jump to avoid low attacks. S/Down makes them duck to avoid high attacks. The defender neither jumps nor ducks.
+- Friendly guardians may overlap or pass through one another. A defender absorbs enemy attacks for guardians behind it in the same lane; those that move past it become vulnerable.
+
+### Guardian mapping (pp. 5, 8-9)
+
+| Assignment role | Theme character | Movement / attack | Health | Availability |
+| --- | --- | --- | --- | --- |
+| Melee | Khopesh Guardian, curved sword and light gold armor | Advances right; animated close-range attack, 1 damage; jumps/ducks | 5 | Available at start; starting balance buys at least three |
+| Defense | Stone Sentinel, hieroglyphic sandstone statue and large shield | Stationary blocker, no attack; protects guardians behind it; no jump/duck | 7 | Card threshold described as 3x melee's collectible requirement |
+| Long Range | Sun Archer, divine gold bow | Advances right; sunlight arrows, 1 damage; jumps/ducks; projectile disappears on impact and never hurts allies | 5 | Card threshold described as 2x melee's collectible requirement |
+
+Each type needs a distinctive model, silhouette, equipment, and animation. Color swaps alone are insufficient. Every character's remaining health stays visible directly above or below it (pp. 9, 11-12).
+
+### Enemy mapping and waves (pp. 10-11)
+
+| Assignment role | Theme creature | Behavior | Health | Damage |
+| --- | --- | --- | --- | --- |
+| Easy / upper ranged | Cursed Scarab | Normal leftward speed; upper cursed attack avoided by ducking | 5 | 1 |
+| Medium / lower ranged | Sand Serpent | Normal leftward speed; low sand attack avoided by jumping | 5 | 1 |
+| Hard / melee | Cursed Pharaoh (elite enemy type) | Runs left; close-range attack | 7 | 2 |
+
+- Wave 1: at least 3 easy enemies. Wave 2: at least 5, mixing easy and medium. Wave 3: at least 10, mixing all three types.
+- A wave *starts* with its first spawn and *ends* with its last spawn. The next wave waits until all enemies still on screen from the previous wave have been defeated. The elite Pharaoh can appear more than once; it need not be a unique boss.
+- A defeated enemy drops a Sun Coin collectible; a guardian must collide with the drop to collect it. The PDF does not specify the coin value per drop.
+- On defeat, a guardian or enemy disappears. Damage must be communicated by increasingly red model shading as health declines, or by scaling the model smaller after hits (pp. 8, 11).
+- Defeat triggers immediately when any enemy reaches the shrine; all gameplay motion and attacks stop. Victory requires all enemies in all three waves defeated.
+
+### Economy and UI (pp. 5-6, 9, 13)
+
+- Three guardian cards show role, availability, and interaction state. Locked cards are grayscale and do not respond to hover or selection; affordable/unlocked cards show their regular colors and respond to hover.
+- Card availability updates automatically from the *current spendable* Sun Coin balance, including relocking when spending drops the balance below a card's threshold.
+- The current coin/collectible count is displayed at the top and updates correctly after pickup and purchase.
+- The sample diagram's 30 starting coins and card values are illustrative, not authoritative. Authoritative numeric constraints are: initial balance purchases at least three melee guardians, ranged threshold is 2x the melee baseline, defense threshold is 3x, and current funds control availability.
+
+### Art and setting (pp. 3, 5, 11-13)
+
+- Modern OpenGL 3.3+ is required. The whole scene is 2D side view. Every scene component needs substantial shape/model detail; single primitive shapes and recolors do not satisfy the visual requirements.
+- Temple guardians, cursed creatures, shrine, weapons, attacks, and cutscene should all belong to the same ancient Egyptian fantasy setting. Gold sunlight effects identify guardians; dark purple/turquoise effects identify cursed attacks.
+- Home base: distinct, conspicuous sacred shrine around the Sun Crystal. Background: temple ruins under a desert sunset. Four sandstone combat paths.
+- Use at least **five distinct environmental elements besides the shrine**: obelisks, hieroglyphic pillars, sandstone statues, torches, and palm trees. Integrate them into the environment. Gold-bordered health indicators are the theme choice.
+
+### Optional audio and submission facts (pp. 1, 14-15)
+
+- Audio is bonus only: background music, effects for at least four user interactions/events, and a dedicated Main Menu sound settings screen with working volume up/down/mute.
+- The brief calls for a 2-5 minute screen recording with voiceover and a specified title-to-thank-you sequence, plus a compilable source archive. Its stated deadline is **Monday, November 2, 2026 at 11:59 PM**. It states a team size of 3-4 and explicitly prohibits AI assistance.
+
+## Details to resolve when their modules are implemented
+
+- **Exact economy numbers:** the PDF does not fix the melee price, initial balance beyond three melee purchases, coin value per drop, or a separate permanent unlock currency. Choose consistent prices later while preserving the 2x/3x thresholds and automatic relocking.
+- **Placement order:** p. 7 first requires lane selection and then card selection, then says the player chooses a lane after selecting a card. The core requirement is a selected lane plus an active card before a purchase places a guardian at the left edge; either clear interaction order can satisfy this.
+- **Defender positioning:** p. 7 says guardians appear at the leftmost position, while p. 8 requires a defender to protect guardians *behind* it. Later design should provide meaningful space behind a stationary defender without breaking the left-entry rule.
+- **Coin UI wording:** p. 13 says total collected points/collectibles, while purchase and relocking depend on available balance. Show spendable Sun Coins clearly; optionally show lifetime collected separately if useful.
+- **Collision and attack tuning:** exact movement speeds, attack cadence/ranges, projectile velocity, lane dimensions, spawn spacing, and animation timing are unspecified. They can be tuned, but required damage, health, dodge rules, and wave counts must stay fixed.
+
+## Implementation status
+
+### Module 1 - Core Engine and OpenGL Rendering
+
+- Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, resizable viewport, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
+- The temporary test scene draws four paths, a simple shrine, and a textured Sun Crystal. It exercises W/S/Up/Down, mouse hover/click, and Escape. It is **not** final environment or gameplay art.
+- Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
+- No enemy, guardian, combat, coin, wave, menu, or cutscene system has been implemented yet. There is an unrelated pre-existing modified `.idea/vcs.xml`; leave it alone.
