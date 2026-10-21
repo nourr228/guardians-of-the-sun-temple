@@ -10,7 +10,7 @@ class Camera2D;
 class Renderer2D;
 
 // Draws all six articulated models at a feet anchor in world coordinates.
-// Health is supplied by a future entity system; this class never changes it.
+// Health is supplied by guardian/enemy systems; this class never changes it.
 class CharacterRenderer {
 public:
     explicit CharacterRenderer(const Renderer2D& renderer)

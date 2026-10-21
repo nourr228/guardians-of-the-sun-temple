@@ -15,6 +15,7 @@
 #include "core/InputManager.h"
 #include "demo/CharacterShowcase.h"
 #include "demo/GuardianPractice.h"
+#include "demo/WavePractice.h"
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
 #include "rendering/ResourceManager.h"
@@ -35,6 +36,7 @@ Game::~Game() {
     // Release GPU objects while the context is still current.
     showcase_.reset();
     practice_.reset();
+    wavePractice_.reset();
     environment_.reset();
     battlefield_.reset();
     homeBase_.reset();
@@ -132,9 +134,15 @@ void Game::initialize() {
     environment_->loadAssets(*resources_, assets);
     showcase_ = std::make_unique<CharacterShowcase>(*renderer_);
     practice_ = std::make_unique<GuardianPractice>(*battlefield_, *renderer_);
+    wavePractice_ = std::make_unique<WavePractice>(*battlefield_, *renderer_);
     if (std::getenv("GOST_PRACTICE_PREVIEW") != nullptr) {
         practiceVisible_ = true;
         practice_->openPreview();
+    }
+    if (std::getenv("GOST_WAVE_PREVIEW") != nullptr) {
+        wavePracticeVisible_ = true;
+        practiceVisible_ = false;
+        wavePractice_->openPreview();
     }
     if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
         const int stateIndex = std::atoi(state);
@@ -154,8 +162,16 @@ void Game::initialize() {
 
 void Game::update(float deltaTime) {
     if (input_->keyPressed(GLFW_KEY_ESCAPE)) paused_ = !paused_;
-    if (input_->keyPressed(GLFW_KEY_F4)) practiceVisible_ = !practiceVisible_;
-    if (!practiceVisible_) showcase_->handleInput(*input_);
+    if (input_->keyPressed(GLFW_KEY_F4)) {
+        practiceVisible_ = !practiceVisible_;
+        if (practiceVisible_) wavePracticeVisible_ = false;
+    }
+    if (input_->keyPressed(GLFW_KEY_F5)) {
+        wavePracticeVisible_ = !wavePracticeVisible_;
+        if (wavePracticeVisible_) practiceVisible_ = false;
+    }
+    if (!practiceVisible_ && !wavePracticeVisible_)
+        showcase_->handleInput(*input_);
     const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
     battlefield_->updateHover(mouse);
     if (!paused_ && input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
@@ -163,12 +179,15 @@ void Game::update(float deltaTime) {
     }
     if (!paused_) {
         if (practiceVisible_) practice_->handleInput(*input_, *camera_);
+        if (wavePracticeVisible_) wavePractice_->handleInput(*input_, *camera_);
         environment_->update(deltaTime);
         if (practiceVisible_) practice_->update(deltaTime, *input_);
+        else if (wavePracticeVisible_) wavePractice_->update(deltaTime, *input_);
         else showcase_->update(deltaTime);
     }
-    const std::string nextTitle = practiceVisible_
-            ? practice_->statusText() : showcase_->statusText();
+    const std::string nextTitle = practiceVisible_ ? practice_->statusText()
+            : wavePracticeVisible_ ? wavePractice_->statusText()
+            : showcase_->statusText();
     if (nextTitle != windowTitle_) {
         windowTitle_ = nextTitle;
         glfwSetWindowTitle(window_, windowTitle_.c_str());
@@ -190,6 +209,7 @@ void Game::render() const {
                       environment_->elapsedSeconds());
     environment_->renderForeground(*camera_, *renderer_, *sprites_, *resources_);
     if (practiceVisible_) practice_->render(*camera_);
+    else if (wavePracticeVisible_) wavePractice_->render(*camera_);
     else showcase_->render(*camera_, *battlefield_);
 
     if (paused_) {

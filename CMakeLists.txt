@@ -17,6 +17,8 @@ add_executable(Guardians_of_the_Sun_Temple
         src/core/InputManager.cpp
         src/demo/CharacterShowcase.cpp
         src/demo/GuardianPractice.cpp
+        src/demo/WavePractice.cpp
+        src/entities/Enemy.cpp
         src/entities/Guardian.cpp
         src/rendering/Animator.cpp
         src/rendering/Camera2D.cpp
@@ -27,6 +29,9 @@ add_executable(Guardians_of_the_Sun_Temple
         src/rendering/SpriteRenderer.cpp
         src/rendering/Texture.cpp
         src/systems/GuardianManager.cpp
+        src/systems/EnemyManager.cpp
+        src/systems/EnemySpawner.cpp
+        src/systems/WaveManager.cpp
         src/world/Battlefield.cpp
         src/world/HomeBase.cpp
         src/world/TempleEnvironment.cpp
@@ -92,12 +97,28 @@ if (BUILD_TESTING)
     target_include_directories(guardian_tests PRIVATE src)
     target_link_libraries(guardian_tests PRIVATE glm::glm)
     add_test(NAME guardian_tests COMMAND guardian_tests)
+    add_executable(enemy_wave_tests
+            tests/enemy_wave_tests.cpp
+            src/entities/Enemy.cpp
+            src/entities/Guardian.cpp
+            src/rendering/Animator.cpp
+            src/systems/EnemyManager.cpp
+            src/systems/EnemySpawner.cpp
+            src/systems/GuardianManager.cpp
+            src/systems/WaveManager.cpp
+            src/world/Battlefield.cpp
+    )
+    target_include_directories(enemy_wave_tests PRIVATE src)
+    target_link_libraries(enemy_wave_tests PRIVATE glm::glm)
+    add_test(NAME enemy_wave_tests COMMAND enemy_wave_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(animator_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(guardian_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(enemy_wave_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

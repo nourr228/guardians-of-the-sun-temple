@@ -1,12 +1,14 @@
 # Guardians of the Sun Temple
 
-Modules 1-4 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, and three playable guardian types. The final enemy, economy UI, wave, and menu systems remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-5 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three playable guardian types, and the three enemy waves. The final economy UI, combat refinements, and menu systems remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
 
 ![Six character models](docs/characters-preview.png)
 
 ![Guardian practice preview](docs/guardian-practice-preview.png)
+
+![Enemy wave preview](docs/wave-practice-preview.png)
 
 ## Build and run
 
@@ -36,6 +38,15 @@ The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600
 
 This is a temporary test mode. Training targets, wallet, and card markers will be replaced by later modules. The Sentinel's protection calculation is planned for the combat module.
 
+## Test the enemy waves (F5)
+
+- Press F5 to open Wave Practice mode. It is separate from F4; its 999 Sun Coins are a test allowance, not the final starting balance.
+- Click a lane, press 1/2/3 to choose Khopesh/Sentinel/Archer, and press P to place one. Repeat in several lanes; you can continue placing during a wave.
+- Press Enter to start Wave 1. The window title shows the wave number, whether it is spawning or clearing, spawned/total count, and living enemy count. Wave 1 has 3 Scarabs; Wave 2 has 3 Scarabs and 2 Serpents; Wave 3 has 4 Scarabs, 3 Serpents, and 3 Pharaohs.
+- Use W/Up to jump over low Serpent attacks and hold S/Down to duck under high Scarab attacks. Pharaohs strike at close range for 2 damage. Enemy and guardian health bars show their remaining HP.
+- To inspect wave transitions quickly, press K to defeat current enemies. If the wave is still spawning, later enemies will still appear. The next wave begins only after its last spawn and all its enemies are defeated. Press R to reset the mode.
+- If any enemy reaches the shrine, the action stops and the scene darkens. Clearing all three waves produces a gold victory overlay. F5 closes the mode.
+
 ## World coordinates
 
 World coordinates start at the upper-left corner. X increases to the right and Y increases downward. `Battlefield` owns four fixed lanes, each 100 logical units high. Its API supplies lane bounds, guardian and enemy entry points, a stationary defender anchor, high/middle/low projectile positions, collectible positions, hover state, and selected lane IDs. `HomeBase::reachedBy` checks the loss boundary at X = 154.
@@ -44,11 +55,11 @@ World coordinates start at the upper-left corner. X increases to the right and Y
 
 `TempleEnvironment` renders layered sky, dunes, pyramids, lanes, sandstone details, moving sand, torch flames, obelisks, pillars, a sphinx, and palms. `HomeBase` renders the Sun Crystal shrine with a pulsing glow. The props from the free Egypt pack are credited in [ASSET_CREDITS.md](ASSET_CREDITS.md). The original ZIP remains untouched; only the files used by the scene were copied into `assets/environment/kimssuki/`.
 
-The six characters are built from code-drawn shapes and articulated parts, so Module 3 needs no new image assets. `CharacterRenderer::draw` accepts a character type, animator, feet position, facing, scale, and normalized health. Future entity systems will supply those values. The Stone Sentinel's Attacking pose is its shield activation, not a damage-dealing attack.
+The six characters are built from code-drawn shapes and articulated parts, so no new character image assets are required. `CharacterRenderer::draw` accepts a character type, animator, feet position, facing, scale, and normalized health from the guardian and enemy systems. The Stone Sentinel's Attacking pose is its shield activation, not a damage-dealing attack.
 
 ## Tests
 
-Run `ctest --test-dir cmake-build-debug --output-on-failure`. `world_geometry_tests` checks lane and coordinate rules, `animator_tests` checks animation timing, and `guardian_tests` checks placement, wallet safety, health, movement, control actions, melee contact, and Sun Arrows.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. `world_geometry_tests` checks lane and coordinate rules, `animator_tests` checks animation timing, `guardian_tests` checks guardian mechanics, and `enemy_wave_tests` checks enemy attacks, damage, movement, spawning, and wave transitions.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
@@ -56,10 +67,12 @@ For repeatable showcase captures, set `GOST_PREVIEW_STATE` to 0-6, optionally `G
 
 Set `GOST_PRACTICE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F4 guardian scene.
 
+Set `GOST_WAVE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F5 enemy scene.
+
 ## Source layout
 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
 - `src/rendering/`: shader and texture ownership, indexed quads and polygon renderer, sprites, orthographic camera, character models, and animator.
 - `src/world/`: lane geometry and selection, shrine boundary, and temple environment.
-- `src/entities/` and `src/systems/`: shared guardian state, placement, controls, attacks, and Sun Arrows.
-- `src/demo/`: character showcase and temporary guardian practice mode.
+- `src/entities/` and `src/systems/`: shared guardian/enemy state, attacks, projectiles, random spawning, and wave phases.
+- `src/demo/`: character showcase and temporary guardian/wave practice modes.

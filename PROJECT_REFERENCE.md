@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. Modules 1-4 are implemented; final enemies, combat resolution, economy UI, waves, menus, and progression remain future work.
+This is the reference for module-by-module implementation. Modules 1-5 are implemented; final combat refinements, collectible economy, menus, and progression presentation remain future work.
 
 ## Sources and priority
 
@@ -88,7 +88,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
 - The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- The engine and rendering layer are reused by the later guardian module. Full enemy, coin collection, wave, menu, and cutscene systems are still future work.
+- The engine and rendering layer are reused by the guardian and enemy modules. Coin collection, final menus, and cutscene systems are still future work.
 
 ### Module 2 - Battlefield, Lanes, and Temple Environment
 
@@ -114,3 +114,11 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - W/Up starts a timed jump for movable guardians in all selected lanes; holding S/Down ducks them after any jump ends. Unselected lanes do not receive these actions. Guardians do not change lanes. Health damage changes model tint, and lethal damage runs the defeat animation.
 - F4 opens the temporary Guardian Practice mode. Click to select lanes, hover a selected lane when several are selected, use 1/2/3 to choose Khopesh/Sentinel/Archer, P to place one, T to create a stationary training target, K to remove it, H to test one point of damage, and R to reset the 30-coin test wallet. Window title shows balance, selected type, cost, and the last action. The three small top markers are temporary card indicators. F3 showcase remains available outside practice mode.
 - `guardian_tests` covers failed purchase without charge, unique IDs, HP, movement timing, friendly overlap, selected-lane jump/duck, Sentinel immobility, melee stop/attack/resume, and arrows damaging targets without injuring friends. `docs/guardian-practice-preview.png` is a direct OpenGL capture of the practice scene.
+
+### Module 5 - Enemy Mechanics and Wave Management
+
+- `Enemy` stores unique ID, fixed lane, position, speed, health, attack type/damage/cooldown, behavior, alive state, and `Animator`. Scarab and Serpent each have 5 HP and 1-damage ranged attacks; the faster Pharaoh has 7 HP and a 2-damage melee attack. All three keep attacking on their cadence while active, with damage applied only when a target is reached. Enemy damage uses the existing progressive red tint and death animation.
+- `EnemyManager` implements Module 4's `EnemyTargets` port, so Khopesh strikes and Sun Arrows damage real enemies. It moves enemies left, stops them at guardian contact, owns high/low cursed projectiles, applies 1 damage to the first eligible guardian on their path, and honors ducking against high shots and jumping against low shots. Pharaoh contact strikes deal 2 damage. It reports shrine breach as soon as an enemy's left edge reaches X=154 and exposes one defeat event per killed enemy for later collectible drops. The full Sentinel shielding and combat-resolution rules remain for Module 6.
+- `EnemySpawner` uses a seedable random generator to shuffle permitted enemy types and choose a random lane on each spawn. `WaveManager` has Ready, Spawning, Clearing, Victory, and Defeat phases. The planned populations are 3 Scarabs; 3 Scarabs plus 2 Serpents; and 4 Scarabs plus 3 Serpents plus 3 Pharaohs. Finishing the last spawn enters Clearing; the next wave begins only when no enemy from the current wave is alive.
+- F5 opens temporary Wave Practice mode. It uses the existing guardian placement and movement controls, plus Enter to start, K to defeat active enemies for transition inspection, and R to reset. It starts with 999 practice coins to make all types easy to test; this is not the final economy. The window title shows wave, phase, spawned/total, living count, and defeat count. A gold or dark overlay signals victory or shrine breach. F4 training mode and F3 animation showcase remain available separately.
+- `enemy_wave_tests` verifies stats, lane validity and retention, attacks and dodge rules, melee contact/2 damage, breach, defeat events, real Archer-to-enemy damage, exact wave composition, clearing gates, deterministic spawning, and terminal states. `docs/wave-practice-preview.png` is a direct OpenGL capture of all three enemy models in the battlefield.
