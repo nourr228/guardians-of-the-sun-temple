@@ -6,7 +6,10 @@
 
 class Texture {
 public:
-    explicit Texture(const std::filesystem::path& path);
+    enum class Filter { Linear, Nearest };
+
+    explicit Texture(const std::filesystem::path& path,
+                     Filter filter = Filter::Linear);
     ~Texture();
 
     Texture(const Texture&) = delete;

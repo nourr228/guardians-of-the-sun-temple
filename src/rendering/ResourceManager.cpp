@@ -15,11 +15,12 @@ Shader& ResourceManager::loadShader(const std::string& name,
 }
 
 Texture& ResourceManager::loadTexture(const std::string& name,
-                                      const std::filesystem::path& path) {
+                                      const std::filesystem::path& path,
+                                      Texture::Filter filter) {
     if (textures_.contains(name)) {
         throw std::invalid_argument("Texture already loaded: " + name);
     }
-    auto resource = std::make_unique<Texture>(path);
+    auto resource = std::make_unique<Texture>(path, filter);
     Texture& result = *resource;
     textures_.emplace(name, std::move(resource));
     return result;

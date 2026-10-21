@@ -21,6 +21,9 @@ add_executable(Guardians_of_the_Sun_Temple
         src/rendering/Shader.cpp
         src/rendering/SpriteRenderer.cpp
         src/rendering/Texture.cpp
+        src/world/Battlefield.cpp
+        src/world/HomeBase.cpp
+        src/world/TempleEnvironment.cpp
 )
 
 target_include_directories(Guardians_of_the_Sun_Temple PRIVATE src "${STB_INCLUDE_DIR}")
@@ -42,4 +45,33 @@ if (WIN32)
             $<TARGET_FILE_DIR:Guardians_of_the_Sun_Temple>
             COMMAND_EXPAND_LISTS
     )
+    if (MINGW)
+        get_filename_component(COMPILER_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        foreach (RUNTIME_DLL IN ITEMS
+                libgcc_s_seh-1.dll
+                libstdc++-6.dll
+                libwinpthread-1.dll)
+            add_custom_command(TARGET Guardians_of_the_Sun_Temple POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${COMPILER_RUNTIME_DIR}/${RUNTIME_DLL}"
+                    $<TARGET_FILE_DIR:Guardians_of_the_Sun_Temple>
+            )
+        endforeach ()
+    endif ()
+endif ()
+
+include(CTest)
+if (BUILD_TESTING)
+    add_executable(world_geometry_tests
+            tests/world_geometry_tests.cpp
+            src/world/Battlefield.cpp
+            src/rendering/Camera2D.cpp
+    )
+    target_include_directories(world_geometry_tests PRIVATE src)
+    target_link_libraries(world_geometry_tests PRIVATE glm::glm)
+    add_test(NAME world_geometry_tests COMMAND world_geometry_tests)
+    if (WIN32 AND MINGW)
+        set_tests_properties(world_geometry_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+    endif ()
 endif ()

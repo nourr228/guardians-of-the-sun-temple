@@ -9,6 +9,9 @@ class InputManager;
 class Renderer2D;
 class ResourceManager;
 class SpriteRenderer;
+class Battlefield;
+class HomeBase;
+class TempleEnvironment;
 
 class Game {
 public:
@@ -24,7 +27,6 @@ private:
     void initialize();
     void update(float deltaTime);
     void render() const;
-    [[nodiscard]] int laneAt(float worldY) const;
 
     GLFWwindow* window_ = nullptr;
     bool glfwInitialized_ = false;
@@ -33,11 +35,8 @@ private:
     std::unique_ptr<ResourceManager> resources_;
     std::unique_ptr<Renderer2D> renderer_;
     std::unique_ptr<SpriteRenderer> sprites_;
-
-    float demoTravel_ = 0.0f;
-    float elapsed_ = 0.0f;
-    int demoLane_ = 0;
-    int hoveredLane_ = -1;
-    int selectedLane_ = -1;
+    std::unique_ptr<Battlefield> battlefield_;
+    std::unique_ptr<HomeBase> homeBase_;
+    std::unique_ptr<TempleEnvironment> environment_;
     bool paused_ = false;
 };

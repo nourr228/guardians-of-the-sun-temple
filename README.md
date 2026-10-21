@@ -1,30 +1,41 @@
 # Guardians of the Sun Temple
 
-Module 1 provides the C++20/OpenGL 3.3 rendering and input foundation. The current window is a small **engine demonstration**, not the finished game. The project requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1 and 2 provide the C++20/OpenGL 3.3 engine and a themed four-lane battlefield. Guardian, enemy, economy, wave, and menu systems are planned for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
-## Build
+![Battlefield preview](docs/battlefield-preview.png)
 
-Open the directory in CLion and use the existing CMake profile with the vcpkg toolchain and `x64-mingw-dynamic` triplet. The vcpkg manifest installs GLFW, GLAD, GLM, and stb. Build and run `Guardians_of_the_Sun_Temple`.
+## Build and run
 
-The initial window is 1000 x 600 and is resizable. Shader and image assets are loaded from `assets/` via a path configured by CMake. Graphics resources are deleted while the OpenGL context is still current.
+Open this directory in CLion using the existing CMake profile, vcpkg toolchain, and `x64-mingw-dynamic` triplet. Build and run `Guardians_of_the_Sun_Temple`. The vcpkg manifest installs GLFW, GLAD, GLM, and stb.
 
-## Engine demonstration controls
+On Windows, the build copies GLFW and the MinGW runtime DLLs beside the executable, so the built game can also launch directly from `cmake-build-debug/`.
 
-- **W / Up:** move the gold test marker one lane up.
-- **S / Down:** move it one lane down.
-- **Mouse:** move the world-space crosshair; the hovered lane brightens.
-- **Left click:** toggle selection of the hovered lane.
-- **Escape:** pause or resume the test animation.
+The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600 logical world with letterboxing. Mouse input is converted through the active viewport, so lane selection continues to align after resizing and on high-DPI displays.
 
-The marker movement and crystal pulse are updated using elapsed seconds, not frames. The four paths and shrine are temporary geometry used to exercise the renderer; later modules will add detailed game art and mechanics.
+## Current controls
+
+- Move the mouse over a path to highlight its full playable area.
+- Left click a path to select or deselect it. Several paths can stay selected.
+- Escape pauses or resumes environment animation and lane selection.
+
+W, S, Up, and Down are already tracked by `InputManager`. They will control guardians in the guardian module.
+
+## World coordinates
+
+World coordinates start at the upper-left corner. X increases to the right and Y increases downward. `Battlefield` owns four fixed lanes, each 100 logical units high. Its API supplies lane bounds, guardian and enemy entry points, a stationary defender anchor, high/middle/low projectile positions, collectible positions, hover state, and selected lane IDs. `HomeBase::reachedBy` checks the loss boundary at X = 154.
+
+## Scene and assets
+
+`TempleEnvironment` renders layered sky, dunes, pyramids, lanes, sandstone details, moving sand, torch flames, obelisks, pillars, a sphinx, and palms. `HomeBase` renders the Sun Crystal shrine with a pulsing glow. The props from the free Egypt pack are credited in [ASSET_CREDITS.md](ASSET_CREDITS.md). The original ZIP remains untouched; only the files used by the scene were copied into `assets/environment/kimssuki/`.
+
+## Tests
+
+Build `world_geometry_tests` or run `ctest --test-dir cmake-build-debug --output-on-failure`. This checks lane hit testing, multiple selection, spawn and projectile coordinates, the home boundary, and mouse mapping through a resized high-DPI letterboxed viewport.
+
+For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
 ## Source layout
 
-- `src/core/Game.*`: GLFW/GLAD setup, frame loop, demo update and rendering.
-- `src/core/InputManager.*`: polling, pressed-versus-held state, mouse-to-world conversion.
-- `src/rendering/Shader.*`: file loading, compile/link diagnostics, uniform updates.
-- `src/rendering/Texture.*`: image loading and OpenGL texture ownership.
-- `src/rendering/Camera2D.*`: top-left-origin orthographic camera.
-- `src/rendering/Renderer2D.*`: indexed quad for colored and textured objects.
-- `src/rendering/SpriteRenderer.*`: sprite drawing interface.
-- `src/rendering/ResourceManager.*`: shared shader and texture ownership.
+- `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
+- `src/rendering/`: shader and texture ownership, indexed quad renderer, sprites, and orthographic camera.
+- `src/world/`: lane geometry and selection, shrine boundary, and temple environment.

@@ -15,7 +15,8 @@ public:
                        const std::filesystem::path& vertexPath,
                        const std::filesystem::path& fragmentPath);
     Texture& loadTexture(const std::string& name,
-                         const std::filesystem::path& path);
+                         const std::filesystem::path& path,
+                         Texture::Filter filter = Texture::Filter::Linear);
     Shader& shader(const std::string& name) const;
     Texture& texture(const std::string& name) const;
     void clear();

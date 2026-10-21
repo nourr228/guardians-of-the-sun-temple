@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is an analysis and planning reference for future module-by-module work. No gameplay implementation is included here.
+This is the reference for module-by-module implementation. The engine and battlefield modules are implemented; combat and progression remain future work.
 
 ## Sources and priority
 
@@ -85,7 +85,15 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 
 ### Module 1 - Core Engine and OpenGL Rendering
 
-- Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, resizable viewport, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
-- The temporary test scene draws four paths, a simple shrine, and a textured Sun Crystal. It exercises W/S/Up/Down, mouse hover/click, and Escape. It is **not** final environment or gameplay art.
+- Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
+- The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- No enemy, guardian, combat, coin, wave, menu, or cutscene system has been implemented yet. There is an unrelated pre-existing modified `.idea/vcs.xml`; leave it alone.
+- No enemy, guardian, combat, coin, wave, menu, or cutscene system has been implemented yet.
+
+### Module 2 - Battlefield, Lanes, and Temple Environment
+
+- `Battlefield` provides four immutable lane positions, hover and independent multi-selection states, guardian and enemy entry points, stationary defender anchor, projectile heights, collectible placement, and the home breach boundary.
+- `Camera2D` and `InputManager` map cursor coordinates through the letterboxed framebuffer, including high-DPI scaling. Selection ignores the shrine and letterbox bars.
+- `TempleEnvironment` layers a desert sunset, dunes, pyramids, sandstone lanes, hieroglyphic pillars, obelisks, sphinx, animated torches, palms, drifting sand, and debris. `HomeBase` renders the Sun Crystal shrine and glow.
+- Selected assets from the user-supplied `EgyptFree.zip` are copied into `assets/environment/kimssuki/`; credits and source are in `ASSET_CREDITS.md`. The original ZIP is unchanged.
+- `world_geometry_tests` covers lane hit testing, multiple selection, entry and projectile coordinates, home breach, and resize/DPI mouse mapping. The rendered scene was captured directly from OpenGL at 1000 x 600.

@@ -1,7 +1,5 @@
 #include "core/InputManager.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-
 #include "rendering/Camera2D.h"
 
 InputManager::InputManager(GLFWwindow* window) : window_(window) {
@@ -74,12 +72,7 @@ glm::vec2 InputManager::mouseWorldPosition(const Camera2D& camera) const {
     int width = 1;
     int height = 1;
     glfwGetWindowSize(window_, &width, &height);
-    const float safeWidth = static_cast<float>(width > 0 ? width : 1);
-    const float safeHeight = static_cast<float>(height > 0 ? height : 1);
-    const glm::vec4 clipPosition(
-            2.0f * mousePosition_.x / safeWidth - 1.0f,
-            1.0f - 2.0f * mousePosition_.y / safeHeight,
-            0.0f, 1.0f);
-    const glm::vec4 world = glm::inverse(camera.viewProjection()) * clipPosition;
-    return {world.x / world.w, world.y / world.w};
+    return camera.windowToWorld(mousePosition_,
+                                {static_cast<float>(width),
+                                 static_cast<float>(height)});
 }
