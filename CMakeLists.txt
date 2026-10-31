@@ -19,6 +19,9 @@ add_executable(Guardians_of_the_Sun_Temple
         src/demo/CharacterShowcase.cpp
         src/demo/GuardianPractice.cpp
         src/demo/WavePractice.cpp
+        src/economy/EconomyHud.cpp
+        src/economy/EconomyManager.cpp
+        src/economy/PurchaseSystem.cpp
         src/entities/Enemy.cpp
         src/entities/Guardian.cpp
         src/rendering/Animator.cpp
@@ -129,6 +132,21 @@ if (BUILD_TESTING)
     target_include_directories(combat_tests PRIVATE src)
     target_link_libraries(combat_tests PRIVATE glm::glm)
     add_test(NAME combat_tests COMMAND combat_tests)
+    add_executable(economy_tests
+            tests/economy_tests.cpp
+            src/combat/CombatSystem.cpp
+            src/economy/EconomyManager.cpp
+            src/economy/PurchaseSystem.cpp
+            src/entities/Enemy.cpp
+            src/entities/Guardian.cpp
+            src/rendering/Animator.cpp
+            src/systems/EnemyManager.cpp
+            src/systems/GuardianManager.cpp
+            src/world/Battlefield.cpp
+    )
+    target_include_directories(economy_tests PRIVATE src)
+    target_link_libraries(economy_tests PRIVATE glm::glm)
+    add_test(NAME economy_tests COMMAND economy_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
@@ -139,6 +157,8 @@ if (BUILD_TESTING)
         set_tests_properties(enemy_wave_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(combat_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(economy_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

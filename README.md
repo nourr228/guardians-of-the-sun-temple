@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple
 
-Modules 1-6 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, and unified combat. The final spendable coin economy, menus, and progression presentation remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-7 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, unified combat, and a working Sun Coin economy. Menus and final progression presentation remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
 
@@ -11,6 +11,10 @@ Modules 1-6 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six anim
 ![Enemy wave preview](docs/wave-practice-preview.png)
 
 ![Unified combat preview](docs/combat-preview.png)
+
+![Starting economy: only melee available](docs/economy-start-preview.png)
+
+![Economy after three pickups](docs/economy-unlocked-preview.png)
 
 ## Build and run
 
@@ -42,11 +46,12 @@ This is a temporary test mode. Training targets, wallet, and card markers will b
 
 ## Test the enemy waves (F5)
 
-- Press F5 to open Wave Practice mode. It is separate from F4; its 999 Sun Coins are a test allowance, not the final starting balance.
-- Click a lane, press 1/2/3 to choose Khopesh/Sentinel/Archer, and press P to place one. Repeat in several lanes; you can continue placing during a wave.
+- Press F5 to open Wave Practice mode. It starts with 30 Sun Coins. Only Khopesh is initially active; the gray Archer and Sentinel cards cannot be selected yet.
+- Click a lane, then press 1/2/3 or click an active top card to choose Khopesh/Sentinel/Archer, and press P to purchase one. Unavailable cards ignore mouse selection. You can continue buying during a wave when the card is active and funds are sufficient.
 - Press Enter to start Wave 1. The window title shows the wave number, whether it is spawning or clearing, spawned/total count, and living enemy count. Wave 1 has 3 Scarabs; Wave 2 has 3 Scarabs and 2 Serpents; Wave 3 has 4 Scarabs, 3 Serpents, and 3 Pharaohs.
 - Use W/Up to jump over low Serpent attacks and hold S/Down to duck under high Scarab attacks. Pharaohs strike at close range for 2 damage. Enemy and guardian health bars show their remaining HP.
-- To inspect wave transitions quickly, press K to defeat current enemies. If the wave is still spawning, later enemies will still appear. The next wave begins only after its last spawn and all its enemies are defeated. Press R to reset the mode.
+- Each defeated enemy drops a gold Sun Coin. A guardian must touch it to collect it; every pickup adds 10 to the balance. After two pickups, Archer is eligible; after three, Sentinel is eligible. A card still needs the current balance to cover its 10/20/30 cost, so spending can gray it out again. The top-left panel shows spendable coins and the window title shows pickups.
+- To inspect wave transitions quickly, press K to defeat current enemies. Kills alone do not pay; the coin must still be collected. If the wave is still spawning, later enemies will appear. The next wave begins only after its last spawn and all its enemies are defeated. Press R to reset the mode and wallet.
 - If any enemy reaches the shrine, the action stops and the scene darkens. Clearing all three waves produces a gold victory overlay. F5 closes the mode.
 
 ## Test combat and Sentinel protection (F5)
@@ -54,7 +59,7 @@ This is a temporary test mode. Training targets, wallet, and card markers will b
 - For a repeatable shield test, press **R** in F5, then **T**. This creates a stationary Khopesh Guardian behind a Stone Sentinel and a nearby Scarab in lane 1. The first high cursed shots should reduce the Sentinel's health while the Khopesh remains at 5 HP.
 - Press **Y** to move the Khopesh ahead of the Sentinel. Later shots should damage the Khopesh directly. Press Y again to return it behind the shield.
 - Press **H** to destroy the Sentinel. Subsequent shots can now hit the guardian behind it. Press **R** to clear this test before starting the normal waves.
-- In normal waves, defeated enemies leave gold Sun Coins at their defeat positions. A guardian collects a coin by touching it; the window title shows the pickup count. This pickup event is ready for Module 7, where it will increase spendable currency.
+- The T/Y/H shield scenario creates its characters as a test fixture without spending Sun Coins. Press R to return to the normal 30-coin start before testing purchases and waves.
 
 ## World coordinates
 
@@ -68,7 +73,7 @@ The six characters are built from code-drawn shapes and articulated parts, so no
 
 ## Tests
 
-Run `ctest --test-dir cmake-build-debug --output-on-failure`. The five suites cover lane geometry, animation, guardian placement and movement, exact wave composition and gating, and combat damage, dodge, shielding, projectile removal, pickups, and shrine breach.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. The six suites cover lane geometry, animation, guardian movement, exact wave composition, combat rules, and economy transactions and pickup rewards.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
@@ -78,6 +83,8 @@ Set `GOST_PRACTICE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F4 gu
 
 Set `GOST_WAVE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F5 enemy scene.
 
+Set `GOST_ECONOMY_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture the initial 30-coin card state.
+
 ## Source layout
 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
@@ -85,4 +92,5 @@ Set `GOST_WAVE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F5 enemy 
 - `src/world/`: lane geometry and selection, shrine boundary, and temple environment.
 - `src/entities/` and `src/systems/`: guardian/enemy state, placement, random spawning, and wave phases.
 - `src/combat/`: central contact, attack, projectile, damage, protection, and coin pickup rules.
+- `src/economy/`: spendable currency, pickup credit, card availability, purchasing, and compact HUD.
 - `src/demo/`: character showcase and temporary guardian/wave practice modes.

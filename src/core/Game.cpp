@@ -144,6 +144,10 @@ void Game::initialize() {
         practiceVisible_ = false;
         wavePractice_->openPreview();
     }
+    if (std::getenv("GOST_ECONOMY_PREVIEW") != nullptr) {
+        wavePracticeVisible_ = true;
+        practiceVisible_ = false;
+    }
     if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
         const int stateIndex = std::atoi(state);
         if (stateIndex >= 0 && stateIndex <= 6) {

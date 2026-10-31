@@ -14,12 +14,10 @@ WavePractice::WavePractice(const Battlefield& battlefield,
                            const Renderer2D& renderer)
         : battlefield_(battlefield), renderer_(renderer),
           characters_(renderer), guardians_(battlefield),
-          enemies_(battlefield), combat_(battlefield) {}
-
-bool WavePractice::spend(int amount) {
-    if (amount < 0 || amount > coins_) return false;
-    coins_ -= amount;
-    return true;
+          enemies_(battlefield), combat_(battlefield), hud_(renderer) {
+    economy_.setOnChange([this](const EconomySnapshot& state) {
+        economyView_ = state;
+    });
 }
 
 int WavePractice::inputLane() const {
@@ -31,23 +29,37 @@ int WavePractice::inputLane() const {
 
 void WavePractice::handleInput(const InputManager& input,
                                const Camera2D& camera) {
-    hoveredLane_ = battlefield_.laneAt(
-            input.mouseWorldPosition(camera)).value_or(-1);
-    if (input.keyPressed(GLFW_KEY_1)) selectedType_ = GuardianType::Khopesh;
-    if (input.keyPressed(GLFW_KEY_2)) selectedType_ = GuardianType::Sentinel;
-    if (input.keyPressed(GLFW_KEY_3)) selectedType_ = GuardianType::Archer;
+    const glm::vec2 mouse = input.mouseWorldPosition(camera);
+    hoveredLane_ = battlefield_.laneAt(mouse).value_or(-1);
+    hoveredCard_ = hud_.cardAt(mouse);
     if (input.keyPressed(GLFW_KEY_R)) {
         reset();
         return;
     }
     if (waves_.phase() == WavePhase::Victory ||
         waves_.phase() == WavePhase::Defeat) return;
+    auto selectCard = [this](GuardianType type) {
+        if (economy_.cardState(type).available) {
+            selectedType_ = type;
+            message_ = std::string(guardianName(type)) + " selected";
+        } else {
+            message_ = std::string(guardianName(type)) + " card unavailable";
+        }
+    };
+    if (input.mousePressed(GLFW_MOUSE_BUTTON_LEFT) && hoveredCard_ &&
+        economy_.cardState(*hoveredCard_).available)
+        selectCard(*hoveredCard_);
+    if (input.keyPressed(GLFW_KEY_1)) selectCard(GuardianType::Khopesh);
+    if (input.keyPressed(GLFW_KEY_2)) selectCard(GuardianType::Sentinel);
+    if (input.keyPressed(GLFW_KEY_3)) selectCard(GuardianType::Archer);
     if (input.keyPressed(GLFW_KEY_T) && waves_.phase() == WavePhase::Ready) {
         if (!guardians_.guardians().empty() || !enemies_.enemies().empty()) {
             message_ = "Press R, then T for the shield test";
         } else {
-            guardians_.tryPlace(GuardianType::Khopesh, 0, *this);
-            guardians_.tryPlace(GuardianType::Sentinel, 0, *this);
+            guardians_.guardians().emplace_back(900001,
+                    GuardianType::Khopesh, 0, battlefield_.guardianEntry(0));
+            guardians_.guardians().emplace_back(900002,
+                    GuardianType::Sentinel, 0, battlefield_.defenderAnchor(0));
             guardians_.guardians()[0].speed = 0.0f;
             const auto id = enemies_.spawn(EnemyType::Scarab, 0);
             for (Enemy& enemy : enemies_.enemies())
@@ -71,14 +83,26 @@ void WavePractice::handleInput(const InputManager& input,
         message_ = "Shield destroyed; guardian is exposed";
     }
     if (input.keyPressed(GLFW_KEY_P)) {
-        const PlacementResult result = guardians_.tryPlace(
-                selectedType_, inputLane(), *this);
-        if (result == PlacementResult::Placed)
-            message_ = std::string(guardianName(selectedType_)) + " placed";
-        else if (result == PlacementResult::InvalidLane)
+        const PurchaseResult result = purchases_.tryPurchase(
+                selectedType_, inputLane(), !shieldScenario_,
+                guardians_, economy_);
+        switch (result) {
+        case PurchaseResult::Purchased:
+            message_ = std::string(guardianName(selectedType_)) + " purchased";
+            break;
+        case PurchaseResult::InvalidLane:
             message_ = "Select a lane; hover it if several are selected";
-        else
-            message_ = "Insufficient practice coins";
+            break;
+        case PurchaseResult::Locked:
+            message_ = "Collect more Sun Coins to activate this card";
+            break;
+        case PurchaseResult::InsufficientCoins:
+            message_ = "Not enough spendable Sun Coins";
+            break;
+        case PurchaseResult::NotPlaying:
+            message_ = "Reset the shield test before purchasing";
+            break;
+        }
     }
     if (input.keyPressed(GLFW_KEY_ENTER) ||
         input.keyPressed(GLFW_KEY_KP_ENTER)) {
@@ -112,6 +136,15 @@ void WavePractice::update(float deltaTime, const InputManager& input) {
     controls.duckHeld = input.keyDown(GLFW_KEY_S) ||
                         input.keyDown(GLFW_KEY_DOWN);
     combat_.update(deltaTime, controls, guardians_, enemies_);
+    int credited = 0;
+    for (const CoinPickup& pickup : combat_.takePickups())
+        if (economy_.creditPickup(pickup)) ++credited;
+    if (credited > 0)
+        message_ = std::to_string(credited * EconomyManager::rewardPerPickup) +
+                   " Sun Coins collected";
+    if (!economy_.cardState(selectedType_).available &&
+        economy_.cardState(GuardianType::Khopesh).available)
+        selectedType_ = GuardianType::Khopesh;
     defeated_ = combat_.defeatedCount();
     if (enemies_.breachedHome()) {
         waves_.markDefeat();
@@ -199,6 +232,7 @@ void WavePractice::render(const Camera2D& camera) const {
                            reached ? glm::vec4(1.0f, 0.76f, 0.3f, 1.0f)
                                    : glm::vec4(0.43f, 0.31f, 0.27f, 1.0f));
     }
+    hud_.render(camera, economyView_, selectedType_, hoveredCard_);
     if (waves_.phase() == WavePhase::Victory ||
         waves_.phase() == WavePhase::Defeat) {
         const bool victory = waves_.phase() == WavePhase::Victory;
@@ -217,8 +251,9 @@ void WavePractice::reset() {
     enemies_.clear();
     combat_.reset();
     waves_.reset();
+    economy_.reset();
     selectedType_ = GuardianType::Khopesh;
-    coins_ = 999;
+    hoveredCard_.reset();
     defeated_ = 0;
     shieldScenario_ = false;
     guardianAhead_ = false;
@@ -227,9 +262,15 @@ void WavePractice::reset() {
 
 void WavePractice::openPreview() {
     reset();
-    guardians_.tryPlace(GuardianType::Khopesh, 0, *this);
-    guardians_.tryPlace(GuardianType::Sentinel, 1, *this);
-    guardians_.tryPlace(GuardianType::Archer, 2, *this);
+    economy_.creditPickup({900001, 0});
+    economy_.creditPickup({900002, 0});
+    economy_.creditPickup({900003, 0});
+    guardians_.guardians().emplace_back(900001,
+            GuardianType::Khopesh, 0, battlefield_.guardianEntry(0));
+    guardians_.guardians().emplace_back(900002,
+            GuardianType::Sentinel, 1, battlefield_.defenderAnchor(1));
+    guardians_.guardians().emplace_back(900003,
+            GuardianType::Archer, 2, battlefield_.guardianEntry(2));
     enemies_.spawn(EnemyType::Scarab, 0);
     enemies_.spawn(EnemyType::Serpent, 1);
     enemies_.spawn(EnemyType::Pharaoh, 2);
@@ -252,8 +293,8 @@ std::string WavePractice::statusText() const {
     out << "F5 Wave Practice | Wave " << waves_.waveNumber() << "/3 "
         << phaseName << " " << waves_.spawnedCount() << "/"
         << waves_.waveTotal() << " spawned, " << enemies_.livingCount()
-        << " alive | Defeated " << defeated_
-        << " | Picked up " << combat_.collectedCount() << " | " << message_
+        << " alive | Sun Coins " << economy_.balance()
+        << " | Pickups " << economy_.pickupCount() << " | " << message_
         << " | Enter start, 1-3 type, P place, K clear, T shield test, R reset";
     return out.str();
 }
