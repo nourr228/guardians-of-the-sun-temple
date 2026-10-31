@@ -10,6 +10,12 @@ int main() {
     menu.escape();
     assert(menu.screen() == GameScreen::MainMenu);
     menu.activate(MenuAction::Start);
+    assert(menu.screen() == GameScreen::Cutscene);
+    assert(!menu.buttonAt({500, 350}));
+    menu.escape();
+    assert(menu.screen() == GameScreen::MainMenu);
+    menu.activate(MenuAction::Start);
+    menu.finishCutscene();
     assert(menu.isPlaying());
     assert(!menu.buttonAt({500, 350}));
     menu.escape();
@@ -28,4 +34,6 @@ int main() {
     assert(menu.screen() == GameScreen::Victory);
     menu.activate(MenuAction::MainMenu);
     assert(menu.screen() == GameScreen::MainMenu);
+    menu.activate(MenuAction::Start);
+    assert(menu.screen() == GameScreen::Cutscene);
 }

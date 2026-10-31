@@ -15,7 +15,7 @@ constexpr glm::vec4 pale{1.0f, 0.94f, 0.77f, 1.0f};
 void MenuRenderer::render(const Camera2D& camera, const MenuManager& menu,
                           glm::vec2 mouse) const {
     const GameScreen screen = menu.screen();
-    if (screen == GameScreen::Playing) return;
+    if (screen == GameScreen::Playing || screen == GameScreen::Cutscene) return;
     const bool main = screen == GameScreen::MainMenu;
     const bool victory = screen == GameScreen::Victory;
     const bool defeat = screen == GameScreen::Defeat;

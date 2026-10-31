@@ -16,6 +16,8 @@ add_executable(Guardians_of_the_Sun_Temple
         src/combat/CombatSystem.cpp
         src/core/Game.cpp
         src/core/InputManager.cpp
+        src/cutscene/CutsceneManager.cpp
+        src/cutscene/CutsceneRenderer.cpp
         src/demo/CharacterShowcase.cpp
         src/demo/GuardianPractice.cpp
         src/demo/WavePractice.cpp
@@ -157,6 +159,15 @@ if (BUILD_TESTING)
     target_include_directories(menu_tests PRIVATE src)
     target_link_libraries(menu_tests PRIVATE glm::glm)
     add_test(NAME menu_tests COMMAND menu_tests)
+    add_executable(cutscene_tests
+            tests/cutscene_tests.cpp
+            src/cutscene/CutsceneManager.cpp
+            src/rendering/Animator.cpp
+            src/ui/MenuManager.cpp
+    )
+    target_include_directories(cutscene_tests PRIVATE src)
+    target_link_libraries(cutscene_tests PRIVATE glm::glm)
+    add_test(NAME cutscene_tests COMMAND cutscene_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
@@ -171,6 +182,8 @@ if (BUILD_TESTING)
         set_tests_properties(economy_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(menu_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(cutscene_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. Modules 1-8 are implemented; the opening cutscene remains future work.
+This is the reference for module-by-module implementation. Modules 1-9 are implemented.
 
 ## Sources and priority
 
@@ -88,7 +88,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
 - The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- The engine and rendering layer are reused by the guardian, enemy, combat, economy, and menu modules. The cutscene remains future work.
+- The engine and rendering layer are reused by the guardian, enemy, combat, economy, menu, and cutscene modules.
 
 ### Module 2 - Battlefield, Lanes, and Temple Environment
 
@@ -146,4 +146,12 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - The HUD includes balance, pickup count, wave number and progress, a help/footer message, and three named guardian cards with icons, costs, active/locked/insufficient-funds states, and selected/hovered borders. The economy snapshot updates it immediately. Existing gold-bordered health bars and full-lane hover/selection highlights remain in use.
 - Game input checks menu buttons first, then the HUD, then the battlefield. Menu and card clicks cannot toggle lanes underneath. The earlier K/R/T/Y/H wave diagnostics are available only after switching into F5 debug mode. Normal restart uses the menu.
 - Victory and defeat screens use different gold and purple crystal effects over the shrine. `menu_tests` covers transitions and button hitboxes; all seven test suites pass. Direct OpenGL captures in `docs/ui-*-preview.png` cover the Main Menu, HUD, pause, victory, defeat, and six-character health bars.
-- The assignment's 10-20 second animated opening cutscene remains outside Module 8; Start Game currently enters playable preparation directly and leaves a transition point for it.
+- Module 9 now fills the transition between Start Game and playable preparation with a 16-second animated cutscene.
+
+### Module 9 - Introductory Story Cutscene
+
+- Main Menu Start Game resets the session and enters a new Cutscene screen. The `CutsceneManager` owns a 16-second timeline, six visual-only actor models and their animation states, movement interpolation, dialogue cues, storm intensity, crystal pulse, curse bolt, sword deflection, arrow, and gold transition. These actors never alter health, Sun Coins, lanes, or wave state.
+- Scene 1 (0-4s) shows the Heart of the Sun glowing beside a watchful Khopesh Guardian. Scene 2 (4-8s) darkens the temple and introduces the Cursed Pharaoh and two Scarabs through moving sand. Scene 3 (8-12s) shows the Pharaoh demanding the crystal and firing a curse that the Guardian visibly deflects. Scene 4 (12-16s) brings the Sun Archer and Stone Sentinel into view, sends a sunlight arrow toward the army, and fades into the playable battlefield.
+- The `CutsceneRenderer` reuses the existing temple environment, shrine, detailed character models, `Animator`, and text atlas. Dialogue is subtitled in a cinematic band while characters move and interact. It requires no new external art or audio.
+- Space skips to gameplay. Escape returns to the Main Menu. Restart from Pause/Victory/Defeat goes directly to a clean gameplay session; Start Game from the Main Menu replays the cutscene. During the cutscene, battlefield input and gameplay systems do not update.
+- `cutscene_tests` checks key timed cues, actor appearance and motion, animation poses, skip/reset, and exactly 16-second completion at 30, 60, and 144 Hz. All eight suites pass. Six direct OpenGL captures in `docs/cutscene-*.png` document the story beats and transition.

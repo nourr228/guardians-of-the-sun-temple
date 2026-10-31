@@ -6,7 +6,7 @@
 
 #include <glm/vec2.hpp>
 
-enum class GameScreen { MainMenu, Playing, Paused, Victory, Defeat };
+enum class GameScreen { MainMenu, Cutscene, Playing, Paused, Victory, Defeat };
 enum class MenuAction { Start, Continue, Restart, MainMenu, Exit };
 
 struct MenuButton {
@@ -29,6 +29,7 @@ public:
     [[nodiscard]] std::array<std::optional<MenuButton>, 3> buttons() const;
     void activate(MenuAction action);
     void escape();
+    void finishCutscene();
     void finish(bool victory);
 
 private:

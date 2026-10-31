@@ -20,6 +20,8 @@ class GuardianPractice;
 class WavePractice;
 class TextRenderer;
 class MenuRenderer;
+class CutsceneManager;
+class CutsceneRenderer;
 
 class Game {
 public:
@@ -51,9 +53,12 @@ private:
     std::unique_ptr<WavePractice> wavePractice_;
     std::unique_ptr<TextRenderer> text_;
     std::unique_ptr<MenuRenderer> menuRenderer_;
+    std::unique_ptr<CutsceneManager> cutscene_;
+    std::unique_ptr<CutsceneRenderer> cutsceneRenderer_;
     MenuManager menus_;
     std::string windowTitle_;
     bool practiceVisible_ = false;
     bool wavePracticeVisible_ = false;
     bool debugControls_ = false;
+    float revealRemaining_ = 0.0f;
 };

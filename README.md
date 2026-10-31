@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple
 
-Modules 1-8 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, unified combat, Sun Coin economy, gameplay HUD, and menus. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-9 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, unified combat, Sun Coin economy, gameplay HUD, menus, and a 16-second animated introduction. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
 
@@ -22,6 +22,12 @@ Modules 1-8 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six anim
 
 ![Pause Menu](docs/ui-pause-preview.png)
 
+![Cutscene opening](docs/cutscene-1_5.png)
+
+![Cutscene confrontation](docs/cutscene-11_4.png)
+
+![Cutscene defenders assemble](docs/cutscene-13_9.png)
+
 ## Build and run
 
 Open this directory in CLion using the existing CMake profile, vcpkg toolchain, and `x64-mingw-dynamic` triplet. Build and run `Guardians_of_the_Sun_Temple`. The vcpkg manifest installs GLFW, GLAD, GLM, and stb.
@@ -32,7 +38,7 @@ The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600
 
 ## Play the game
 
-- Click **Start Game** on the Main Menu. The preparation screen starts with 30 Sun Coins. Khopesh is available; the other two cards are gray and locked.
+- Click **Start Game** on the Main Menu. The 16-second introduction plays before the preparation screen. During the cutscene, **Space** skips to gameplay and **Escape** returns to the Main Menu. The preparation screen starts with 30 Sun Coins. Khopesh is available; the other two cards are gray and locked.
 - Click a path to select or deselect it. Several paths can stay selected. Hover the intended selected path if several are selected.
 - Click an available guardian card or press 1/2/3, then press P to purchase it in the selected path. The HUD updates the balance immediately. A failed purchase does not charge coins.
 - Press Enter to begin Wave 1. W/Up jumps and S/Down ducks guardians in selected paths. Guardian and enemy health bars stay above their models.
@@ -40,7 +46,7 @@ The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600
 - Press Escape to pause. Click Continue, Restart, or Main Menu. Victory and defeat each offer Restart and Main Menu. The Main Menu has Exit Game.
 - The wave, spawned count, remaining enemies, balance, pickups, card names, costs, and availability appear on screen.
 
-The assignment's opening cutscene is outside Module 8. Start Game currently enters the playable preparation state directly.
+An uninterrupted opening shows the crystal, the cursed army's arrival, the Pharaoh and Guardian confronting one another, the Archer and Sentinel responding, and a gold transition into gameplay. Restart from Pause, Victory, or Defeat returns directly to gameplay; choosing Start Game again from the Main Menu replays the cutscene.
 
 ## Development inspection modes
 
@@ -87,7 +93,7 @@ The six characters are built from code-drawn shapes and articulated parts, so no
 
 ## Tests
 
-Run `ctest --test-dir cmake-build-debug --output-on-failure`. The seven suites cover lane geometry, animation, guardian movement, exact wave composition, combat rules, economy transactions, and menu transitions/hit testing.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. The eight suites cover lane geometry, animation, guardian movement, exact wave composition, combat rules, economy transactions, menu transitions, and cutscene timing at different frame rates.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
@@ -101,6 +107,8 @@ Set `GOST_ECONOMY_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture the initial 30-
 
 Set `GOST_UI_PREVIEW` to `play`, `pause`, `win`, or `lose` with `GOST_CAPTURE_PATH` to capture a UI screen. With only `GOST_CAPTURE_PATH`, the Main Menu is captured.
 
+Set `GOST_CUTSCENE_PREVIEW_TIME` to a time between 0 and 16 seconds with `GOST_CAPTURE_PATH` to capture a specific cutscene moment. Example values: `1.5`, `5.8`, `11.4`, and `13.9`.
+
 ## Source layout
 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
@@ -110,6 +118,7 @@ Set `GOST_UI_PREVIEW` to `play`, `pause`, `win`, or `lose` with `GOST_CAPTURE_PA
 - `src/combat/`: central contact, attack, projectile, damage, protection, and coin pickup rules.
 - `src/economy/`: spendable currency, pickup credit, card availability, purchasing, and gameplay HUD.
 - `src/ui/`: OpenGL font atlases, menu state and button hit testing, themed menu rendering.
+- `src/cutscene/`: independent 16-second actor timeline, dialogue cues, effects, and cutscene rendering.
 - `src/demo/`: playable wave session plus character and guardian inspection modes.
 
 Cinzel and Noto Sans are bundled in `assets/fonts/` under their included Open Font License files. The source fonts are from the Google Fonts repository.

@@ -17,6 +17,7 @@ std::array<std::optional<MenuButton>, 3> MenuManager::buttons() const {
         return {MenuButton{MenuAction::Restart, "RESTART", {x, 350}, size},
                 MenuButton{MenuAction::MainMenu, "MAIN MENU", {x, 419}, size},
                 std::nullopt};
+    case GameScreen::Cutscene:
     case GameScreen::Playing:
         return {};
     }
@@ -33,7 +34,7 @@ std::optional<MenuButton> MenuManager::buttonAt(glm::vec2 point) const {
 void MenuManager::activate(MenuAction action) {
     switch (action) {
     case MenuAction::Start:
-        if (screen_ == GameScreen::MainMenu) screen_ = GameScreen::Playing;
+        if (screen_ == GameScreen::MainMenu) screen_ = GameScreen::Cutscene;
         break;
     case MenuAction::Continue:
         if (screen_ == GameScreen::Paused) screen_ = GameScreen::Playing;
@@ -53,6 +54,11 @@ void MenuManager::activate(MenuAction action) {
 void MenuManager::escape() {
     if (screen_ == GameScreen::Playing) screen_ = GameScreen::Paused;
     else if (screen_ == GameScreen::Paused) screen_ = GameScreen::Playing;
+    else if (screen_ == GameScreen::Cutscene) screen_ = GameScreen::MainMenu;
+}
+
+void MenuManager::finishCutscene() {
+    if (screen_ == GameScreen::Cutscene) screen_ = GameScreen::Playing;
 }
 
 void MenuManager::finish(bool victory) {
