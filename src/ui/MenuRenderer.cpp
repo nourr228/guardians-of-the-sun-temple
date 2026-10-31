@@ -1,5 +1,8 @@
 #include "ui/MenuRenderer.h"
 
+#include <cmath>
+#include <string>
+
 #include <glm/vec4.hpp>
 
 #include "rendering/Camera2D.h"
@@ -13,7 +16,7 @@ constexpr glm::vec4 pale{1.0f, 0.94f, 0.77f, 1.0f};
 }
 
 void MenuRenderer::render(const Camera2D& camera, const MenuManager& menu,
-                          glm::vec2 mouse) const {
+                          glm::vec2 mouse, float volume, bool muted) const {
     const GameScreen screen = menu.screen();
     if (screen == GameScreen::Playing || screen == GameScreen::Cutscene) return;
     const bool main = screen == GameScreen::MainMenu;
@@ -55,7 +58,12 @@ void MenuRenderer::render(const Camera2D& camera, const MenuManager& menu,
                    {(1000.0f - text_.width(label, height, font)) * 0.5f, y},
                    height, color, font);
     };
-    if (main) {
+    if (main && menu.soundSettingsOpen()) {
+        centered("SOUND SETTINGS", 151, 39, gold, UIFont::Heading);
+        centered(muted ? "MUTED" :
+                 "VOLUME  " + std::to_string(static_cast<int>(std::lround(volume * 100))) + "%",
+                 248, 23, pale, UIFont::Body);
+    } else if (main) {
         centered("GUARDIANS OF THE", 139, 34, gold, UIFont::Heading);
         centered("SUN TEMPLE", 184, 51, pale, UIFont::Heading);
         centered("Defend the Heart of the Sun", 256, 23, pale, UIFont::Body);

@@ -14,6 +14,7 @@ class SpriteRenderer;
 class TempleEnvironment {
 public:
     TempleEnvironment();
+    void reset();
 
     void loadAssets(ResourceManager& resources,
                     const std::filesystem::path& assetRoot) const;

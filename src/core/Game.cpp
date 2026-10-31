@@ -12,6 +12,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#include "audio/AudioManager.h"
 #include "core/InputManager.h"
 #include "cutscene/CutsceneManager.h"
 #include "cutscene/CutsceneRenderer.h"
@@ -44,6 +45,7 @@ Game::~Game() {
     showcase_.reset();
     practice_.reset();
     wavePractice_.reset();
+    audio_.reset();
     text_.reset();
     environment_.reset();
     battlefield_.reset();
@@ -137,6 +139,9 @@ void Game::initialize() {
     renderer_ = std::make_unique<Renderer2D>(shader);
     sprites_ = std::make_unique<SpriteRenderer>(*renderer_);
     text_ = std::make_unique<TextRenderer>(assets);
+    audio_ = std::make_unique<AudioManager>();
+    std::cout << "Audio: " << (audio_->available() ? "enabled" : "silent fallback")
+              << '\n';
     menuRenderer_ = std::make_unique<MenuRenderer>(*renderer_, *text_);
     cutscene_ = std::make_unique<CutsceneManager>();
     cutsceneRenderer_ = std::make_unique<CutsceneRenderer>(*renderer_, *text_);
@@ -147,8 +152,10 @@ void Game::initialize() {
     showcase_ = std::make_unique<CharacterShowcase>(*renderer_);
     practice_ = std::make_unique<GuardianPractice>(*battlefield_, *renderer_);
     wavePractice_ = std::make_unique<WavePractice>(*battlefield_, *renderer_,
-                                                   *text_);
+                                                   *text_, *audio_);
+    debugEnabled_ = std::getenv("GOST_DEBUG") != nullptr;
     if (std::getenv("GOST_PRACTICE_PREVIEW") != nullptr) {
+        debugEnabled_ = true;
         menus_.activate(MenuAction::Start);
         menus_.finishCutscene();
         debugControls_ = true;
@@ -156,6 +163,7 @@ void Game::initialize() {
         practice_->openPreview();
     }
     if (std::getenv("GOST_WAVE_PREVIEW") != nullptr) {
+        debugEnabled_ = true;
         menus_.activate(MenuAction::Start);
         menus_.finishCutscene();
         debugControls_ = true;
@@ -164,13 +172,24 @@ void Game::initialize() {
         wavePractice_->openPreview();
     }
     if (std::getenv("GOST_ECONOMY_PREVIEW") != nullptr) {
+        debugEnabled_ = true;
         menus_.activate(MenuAction::Start);
         menus_.finishCutscene();
         debugControls_ = true;
         wavePracticeVisible_ = true;
         practiceVisible_ = false;
     }
+    if (std::getenv("GOST_EFFECT_PREVIEW") != nullptr) {
+        menus_.activate(MenuAction::Start);
+        menus_.finishCutscene();
+        wavePracticeVisible_ = true;
+        practiceVisible_ = false;
+        wavePractice_->openEffectPreview();
+    }
+    if (std::getenv("GOST_SOUND_PREVIEW") != nullptr)
+        menus_.activate(MenuAction::SoundSettings);
     if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
+        debugEnabled_ = true;
         menus_.activate(MenuAction::Start);
         menus_.finishCutscene();
         const int stateIndex = std::atoi(state);
@@ -196,12 +215,26 @@ void Game::initialize() {
             if (requested == "pause") menus_.escape();
             if (requested == "win" || requested == "lose")
                 menus_.finish(requested == "win");
+            if (requested == "win" || requested == "lose")
+                wavePractice_->openOutcomePreview(requested == "win");
         }
     }
     if (const char* time = std::getenv("GOST_CUTSCENE_PREVIEW_TIME")) {
         menus_.activate(MenuAction::Start);
         cutscene_->seek(std::strtof(time, nullptr));
     }
+}
+
+void Game::resetSession() {
+    wavePractice_->reset();
+    practice_->reset();
+    battlefield_->clearSelections();
+    battlefield_->updateHover({-1, -1});
+    environment_->reset();
+    practiceVisible_ = false;
+    wavePracticeVisible_ = true;
+    debugControls_ = false;
+    revealRemaining_ = 0.0f;
 }
 
 void Game::update(float deltaTime) {
@@ -224,27 +257,34 @@ void Game::update(float deltaTime) {
     const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
     if (!menus_.isPlaying()) {
         battlefield_->updateHover({-1, -1});
+        if ((menus_.screen() == GameScreen::Victory ||
+             menus_.screen() == GameScreen::Defeat) && wavePracticeVisible_)
+            wavePractice_->updatePresentation(deltaTime);
         if (input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
             if (const auto button = menus_.buttonAt(mouse)) {
                 const MenuAction action = button->action;
                 menus_.activate(action);
                 if (action == MenuAction::Start || action == MenuAction::Restart) {
-                    wavePractice_->reset();
-                    battlefield_->clearSelections();
-                    practiceVisible_ = false;
-                    wavePracticeVisible_ = true;
-                    debugControls_ = false;
-                    revealRemaining_ = 0.0f;
+                    resetSession();
                     if (action == MenuAction::Start) cutscene_->start();
+                    audio_->play(SoundCue::Select);
                 } else if (action == MenuAction::MainMenu) {
-                    wavePractice_->reset();
-                    battlefield_->clearSelections();
-                    practiceVisible_ = false;
+                    resetSession();
                     wavePracticeVisible_ = false;
-                    debugControls_ = false;
-                    revealRemaining_ = 0.0f;
+                    audio_->play(SoundCue::Select);
                 } else if (action == MenuAction::Exit) {
                     glfwSetWindowShouldClose(window_, GLFW_TRUE);
+                } else if (action == MenuAction::VolumeDown) {
+                    audio_->adjustVolume(-0.1f);
+                    audio_->play(SoundCue::Select);
+                } else if (action == MenuAction::VolumeUp) {
+                    audio_->adjustVolume(0.1f);
+                    audio_->play(SoundCue::Select);
+                } else if (action == MenuAction::ToggleMute) {
+                    audio_->toggleMute();
+                    audio_->play(SoundCue::Select);
+                } else {
+                    audio_->play(SoundCue::Select);
                 }
             }
         }
@@ -267,14 +307,14 @@ void Game::update(float deltaTime) {
         }
         return;
     }
-    if (input_->keyPressed(GLFW_KEY_F4)) {
+    if (debugEnabled_ && input_->keyPressed(GLFW_KEY_F4)) {
         practiceVisible_ = !practiceVisible_;
         if (practiceVisible_) {
             wavePracticeVisible_ = false;
             debugControls_ = true;
         }
     }
-    if (input_->keyPressed(GLFW_KEY_F5)) {
+    if (debugEnabled_ && input_->keyPressed(GLFW_KEY_F5)) {
         wavePracticeVisible_ = !wavePracticeVisible_;
         if (wavePracticeVisible_) {
             practiceVisible_ = false;
@@ -329,7 +369,13 @@ void Game::render() const {
         else if (wavePracticeVisible_) wavePractice_->render(*camera_);
         else showcase_->render(*camera_, *battlefield_);
     }
-    menuRenderer_->render(*camera_, menus_, input_->mouseWorldPosition(*camera_));
+    const AudioSettings settings = audio_->settings();
+    menuRenderer_->render(*camera_, menus_,
+                          input_->mouseWorldPosition(*camera_),
+                          settings.volume, settings.muted);
+    if ((menus_.screen() == GameScreen::Victory ||
+         menus_.screen() == GameScreen::Defeat) && wavePracticeVisible_)
+        wavePractice_->renderEffects(*camera_);
     if (menus_.isPlaying() && revealRemaining_ > 0.0f)
         renderer_->drawRect(*camera_, {0, 0}, {1000, 600},
                             {1.0f, 0.84f, 0.36f,

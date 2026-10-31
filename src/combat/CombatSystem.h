@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "effects/EffectEvent.h"
 #include "systems/EnemyManager.h"
 #include "systems/GuardianManager.h"
 
@@ -75,6 +76,7 @@ public:
     [[nodiscard]] int collectedCount() const { return collectedCount_; }
     [[nodiscard]] std::vector<CoinPickup> takePickups();
     [[nodiscard]] std::vector<EnemyDefeat> takeEnemyDefeats();
+    [[nodiscard]] std::vector<EffectEvent> takeEffectEvents();
 
     // Attacks arrive from the right. Returns the rightmost living shield
     // between the source and an otherwise eligible guardian.
@@ -94,6 +96,7 @@ private:
                                 EnemyManager& enemies);
     void animateAndPrune(float dt, GuardianManager& guardians,
                          EnemyManager& enemies);
+    void addImpact(float x, float y, AttackKind kind);
     [[nodiscard]] Enemy* contactEnemy(const Guardian& guardian,
                                        EnemyManager& enemies) const;
     [[nodiscard]] Guardian* contactGuardian(const Enemy& enemy,
@@ -105,6 +108,7 @@ private:
     std::vector<SunCoin> coins_;
     std::vector<CoinPickup> pickups_;
     std::vector<EnemyDefeat> defeats_;
+    std::vector<EffectEvent> effectEvents_;
     std::uint64_t nextCoinId_ = 1;
     int defeatedCount_ = 0;
     int collectedCount_ = 0;

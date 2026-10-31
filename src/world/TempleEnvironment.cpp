@@ -62,7 +62,10 @@ void drawTorch(const Camera2D& camera, const Renderer2D& renderer,
 }
 } // namespace
 
-TempleEnvironment::TempleEnvironment() {
+TempleEnvironment::TempleEnvironment() { reset(); }
+
+void TempleEnvironment::reset() {
+    elapsed_ = 0.0f;
     for (std::size_t i = 0; i < sand_.size(); ++i) {
         sand_[i].position = {
                 static_cast<float>((i * 173 + 43) % 1000),

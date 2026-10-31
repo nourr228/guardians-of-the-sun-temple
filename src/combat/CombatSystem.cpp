@@ -39,6 +39,14 @@ AttackSpec attackSpec(AttackKind kind) {
 CombatSystem::CombatSystem(const Battlefield& battlefield)
         : battlefield_(battlefield) {}
 
+void CombatSystem::addImpact(float x, float y, AttackKind kind) {
+    impacts_.push_back({x, y, kind, impactDuration});
+    effectEvents_.push_back({kind == AttackKind::KhopeshStrike ||
+                             kind == AttackKind::SunArrow
+                             ? EffectEventKind::GoldImpact
+                             : EffectEventKind::CurseImpact, x, y});
+}
+
 Guardian* CombatSystem::protectingSentinel(
         std::vector<Guardian>& guardians, int laneId,
         float attackerX, float targetX) {
@@ -179,9 +187,9 @@ void CombatSystem::launchAttacks(GuardianManager& guardians,
                 const float separation = enemy->position.x - guardian.position.x;
                 if (separation <= spec.range) {
                     enemies.applyDamage(enemy->id, spec.damage);
-                    impacts_.push_back({enemy->position.x,
-                            battlefield_.lane(enemy->laneId).centerY,
-                            AttackKind::KhopeshStrike, impactDuration});
+                    addImpact(enemy->position.x,
+                              battlefield_.lane(enemy->laneId).centerY,
+                              AttackKind::KhopeshStrike);
                 }
             }
         } else {
@@ -194,6 +202,9 @@ void CombatSystem::launchAttacks(GuardianManager& guardians,
                     battlefield_.projectilePosition(guardian.laneId,
                             guardian.position.x, ProjectileLevel::Middle).y - 9.0f,
                     spec.projectileSpeed, spec.damage});
+            effectEvents_.push_back({EffectEventKind::ArrowLaunch,
+                                     guardian.position.x + 20.0f,
+                                     battlefield_.lane(guardian.laneId).centerY});
         }
     }
     for (Enemy& enemy : enemies.enemies()) {
@@ -212,9 +223,8 @@ void CombatSystem::launchAttacks(GuardianManager& guardians,
                             enemy.laneId, enemy.position.x, target->position.x))
                         target = shield;
                     target->takeDamage(spec.damage);
-                    impacts_.push_back({target->position.x,
-                            battlefield_.lane(target->laneId).centerY,
-                            kind, impactDuration});
+                    addImpact(target->position.x,
+                              battlefield_.lane(target->laneId).centerY, kind);
                 }
             }
         } else {
@@ -226,6 +236,9 @@ void CombatSystem::launchAttacks(GuardianManager& guardians,
                     battlefield_.projectilePosition(enemy.laneId,
                             enemy.position.x, level).y,
                     spec.projectileSpeed, spec.damage});
+            effectEvents_.push_back({EffectEventKind::CurseLaunch,
+                                     enemy.position.x - 20.0f,
+                                     battlefield_.lane(enemy.laneId).centerY});
         }
     }
 }
@@ -247,8 +260,7 @@ void CombatSystem::moveProjectiles(float dt, GuardianManager& guardians,
             }
             if (hit != nullptr) {
                 enemies.applyDamage(hit->id, projectile.damage);
-                impacts_.push_back({hit->position.x, projectile.y,
-                                    projectile.kind, impactDuration});
+                addImpact(hit->position.x, projectile.y, projectile.kind);
                 projectile.x = Battlefield::playableRight + 1000.0f;
             } else projectile.x = to;
         } else {
@@ -268,8 +280,7 @@ void CombatSystem::moveProjectiles(float dt, GuardianManager& guardians,
                 if (Guardian* shield = protectingSentinel(guardians.guardians(),
                         projectile.laneId, from, hit->position.x)) hit = shield;
                 hit->takeDamage(projectile.damage);
-                impacts_.push_back({hit->position.x, projectile.y,
-                                    projectile.kind, impactDuration});
+                addImpact(hit->position.x, projectile.y, projectile.kind);
                 projectile.x = Battlefield::homeBoundary - 1000.0f;
             } else projectile.x = to;
         }
@@ -286,6 +297,8 @@ void CombatSystem::processDefeatsAndCoins(GuardianManager& guardians,
         if (defeat.type == EnemyType::TrainingDummy) continue;
         ++defeatedCount_;
         defeats_.push_back(defeat);
+        effectEvents_.push_back({EffectEventKind::EnemyDefeat, defeat.x,
+                                 battlefield_.lane(defeat.laneId).centerY});
         const glm::vec2 place = battlefield_.collectiblePosition(
                 defeat.laneId, defeat.x);
         coins_.push_back({nextCoinId_++, defeat.laneId, place.x, place.y});
@@ -302,6 +315,8 @@ void CombatSystem::processDefeatsAndCoins(GuardianManager& guardians,
             }
         }
         if (collector != nullptr) {
+            effectEvents_.push_back({EffectEventKind::CoinPickup,
+                                     coin->x, coin->y});
             pickups_.push_back({coin->id, collector->id});
             ++collectedCount_;
             coin = coins_.erase(coin);
@@ -381,12 +396,19 @@ std::vector<EnemyDefeat> CombatSystem::takeEnemyDefeats() {
     return result;
 }
 
+std::vector<EffectEvent> CombatSystem::takeEffectEvents() {
+    std::vector<EffectEvent> result;
+    result.swap(effectEvents_);
+    return result;
+}
+
 void CombatSystem::reset() {
     projectiles_.clear();
     impacts_.clear();
     coins_.clear();
     pickups_.clear();
     defeats_.clear();
+    effectEvents_.clear();
     nextCoinId_ = 1;
     defeatedCount_ = 0;
     collectedCount_ = 0;

@@ -7,7 +7,10 @@
 #include <glm/vec2.hpp>
 
 enum class GameScreen { MainMenu, Cutscene, Playing, Paused, Victory, Defeat };
-enum class MenuAction { Start, Continue, Restart, MainMenu, Exit };
+enum class MenuAction {
+    Start, Continue, Restart, MainMenu, Exit,
+    SoundSettings, VolumeDown, VolumeUp, ToggleMute, Back
+};
 
 struct MenuButton {
     MenuAction action;
@@ -25,8 +28,9 @@ class MenuManager {
 public:
     [[nodiscard]] GameScreen screen() const { return screen_; }
     [[nodiscard]] bool isPlaying() const { return screen_ == GameScreen::Playing; }
+    [[nodiscard]] bool soundSettingsOpen() const { return soundSettingsOpen_; }
     [[nodiscard]] std::optional<MenuButton> buttonAt(glm::vec2 point) const;
-    [[nodiscard]] std::array<std::optional<MenuButton>, 3> buttons() const;
+    [[nodiscard]] std::array<std::optional<MenuButton>, 4> buttons() const;
     void activate(MenuAction action);
     void escape();
     void finishCutscene();
@@ -34,4 +38,5 @@ public:
 
 private:
     GameScreen screen_ = GameScreen::MainMenu;
+    bool soundSettingsOpen_ = false;
 };

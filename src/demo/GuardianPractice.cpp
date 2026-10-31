@@ -95,6 +95,7 @@ void GuardianPractice::update(float deltaTime, const InputManager& input) {
     controls.duckHeld = input.keyDown(GLFW_KEY_S) ||
                         input.keyDown(GLFW_KEY_DOWN);
     combat_.update(deltaTime, controls, guardians_, enemies_);
+    static_cast<void>(combat_.takeEffectEvents());
 }
 
 void GuardianPractice::render(const Camera2D& camera) const {

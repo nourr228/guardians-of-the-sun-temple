@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 
@@ -178,6 +179,14 @@ int main() {
     assert(combat.takePickups().empty());
     assert(combat.takeEnemyDefeats().size() == 1);
     assert(combat.takeEnemyDefeats().empty());
+    const auto effects = combat.takeEffectEvents();
+    assert(std::count_if(effects.begin(), effects.end(), [](const EffectEvent& e) {
+        return e.kind == EffectEventKind::CoinPickup;
+    }) == 1);
+    assert(std::count_if(effects.begin(), effects.end(), [](const EffectEvent& e) {
+        return e.kind == EffectEventKind::EnemyDefeat;
+    }) == 1);
+    assert(combat.takeEffectEvents().empty());
 
     guardians.clear();
     enemies.clear();

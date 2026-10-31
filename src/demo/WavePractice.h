@@ -5,6 +5,7 @@
 #include "combat/CombatSystem.h"
 #include "economy/EconomyHud.h"
 #include "economy/PurchaseSystem.h"
+#include "effects/EffectManager.h"
 #include "rendering/CharacterRenderer.h"
 #include "systems/EnemyManager.h"
 #include "systems/GuardianManager.h"
@@ -15,18 +16,23 @@ class InputManager;
 class Renderer2D;
 class Battlefield;
 class TextRenderer;
+class AudioManager;
 
 class WavePractice final {
 public:
     WavePractice(const Battlefield& battlefield, const Renderer2D& renderer,
-                 const TextRenderer& text);
+                 const TextRenderer& text, AudioManager& audio);
 
     void handleInput(const InputManager& input, const Camera2D& camera,
                      bool debugControls);
     void update(float deltaTime, const InputManager& input);
+    void updatePresentation(float deltaTime);
     void render(const Camera2D& camera) const;
+    void renderEffects(const Camera2D& camera) const;
     void reset();
     void openPreview();
+    void openEffectPreview();
+    void openOutcomePreview(bool victory);
     [[nodiscard]] bool uiContains(glm::vec2 world) const;
     [[nodiscard]] WavePhase phase() const { return waves_.phase(); }
 
@@ -40,10 +46,12 @@ private:
     const Battlefield& battlefield_;
     const Renderer2D& renderer_;
     const TextRenderer& text_;
+    AudioManager& audio_;
     CharacterRenderer characters_;
     GuardianManager guardians_;
     EnemyManager enemies_;
     CombatSystem combat_;
+    EffectManager effects_;
     WaveManager waves_;
     EconomyManager economy_;
     PurchaseSystem purchases_;

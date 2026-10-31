@@ -5,7 +5,10 @@
 
 #include <GLFW/glfw3.h>
 
+#include "audio/AudioManager.h"
 #include "core/InputManager.h"
+#include "core/SessionReset.h"
+#include "effects/EffectRenderer.h"
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
 #include "ui/TextRenderer.h"
@@ -13,8 +16,9 @@
 
 WavePractice::WavePractice(const Battlefield& battlefield,
                            const Renderer2D& renderer,
-                           const TextRenderer& text)
+                           const TextRenderer& text, AudioManager& audio)
         : battlefield_(battlefield), renderer_(renderer), text_(text),
+          audio_(audio),
           characters_(renderer), guardians_(battlefield),
           enemies_(battlefield), combat_(battlefield), hud_(renderer, text) {
     economy_.setOnChange([this](const EconomySnapshot& state) {
@@ -49,6 +53,7 @@ void WavePractice::handleInput(const InputManager& input,
         if (economy_.cardState(type).available) {
             selectedType_ = type;
             message_ = std::string(guardianName(type)) + " selected";
+            audio_.play(SoundCue::Select);
         } else {
             message_ = std::string(guardianName(type)) + " card unavailable";
         }
@@ -97,6 +102,7 @@ void WavePractice::handleInput(const InputManager& input,
         switch (result) {
         case PurchaseResult::Purchased:
             message_ = std::string(guardianName(selectedType_)) + " purchased";
+            audio_.play(SoundCue::Purchase);
             break;
         case PurchaseResult::InvalidLane:
             message_ = "Select a lane; hover it if several are selected";
@@ -120,6 +126,7 @@ void WavePractice::handleInput(const InputManager& input,
             } else {
                 waves_.start(enemies_);
                 message_ = "Wave 1 started";
+                audio_.play(SoundCue::Select);
             }
         }
     }
@@ -137,6 +144,18 @@ void WavePractice::update(float deltaTime, const InputManager& input) {
     const WavePhase phase = waves_.phase();
     if (phase == WavePhase::Victory || phase == WavePhase::Defeat) return;
     waves_.update(deltaTime, enemies_);
+    if (waves_.phase() == WavePhase::Victory) {
+        effects_.setOutcome(EffectOutcome::Victory);
+        audio_.play(SoundCue::Victory);
+        message_ = "All three waves cleared";
+        return;
+    }
+    if (waves_.phase() == WavePhase::Defeat) {
+        effects_.setOutcome(EffectOutcome::Defeat);
+        audio_.play(SoundCue::Defeat);
+        message_ = "Sun Crystal captured";
+        return;
+    }
     GuardianControls controls;
     controls.selectedLanes = battlefield_.selectedLanes();
     controls.jumpPressed = input.keyPressed(GLFW_KEY_W) ||
@@ -144,6 +163,17 @@ void WavePractice::update(float deltaTime, const InputManager& input) {
     controls.duckHeld = input.keyDown(GLFW_KEY_S) ||
                         input.keyDown(GLFW_KEY_DOWN);
     combat_.update(deltaTime, controls, guardians_, enemies_);
+    for (const EffectEvent& event : combat_.takeEffectEvents()) {
+        effects_.emit(event);
+        switch (event.kind) {
+        case EffectEventKind::ArrowLaunch: audio_.play(SoundCue::Arrow); break;
+        case EffectEventKind::CurseLaunch: audio_.play(SoundCue::Curse); break;
+        case EffectEventKind::CoinPickup: audio_.play(SoundCue::Pickup); break;
+        case EffectEventKind::GoldImpact:
+        case EffectEventKind::CurseImpact: audio_.play(SoundCue::Damage); break;
+        case EffectEventKind::EnemyDefeat: break;
+        }
+    }
     int credited = 0;
     for (const CoinPickup& pickup : combat_.takePickups())
         if (economy_.creditPickup(pickup)) ++credited;
@@ -156,10 +186,23 @@ void WavePractice::update(float deltaTime, const InputManager& input) {
     defeated_ = combat_.defeatedCount();
     if (enemies_.breachedHome()) {
         waves_.markDefeat();
-        message_ = "Sun Crystal captured; R to restart";
-    } else if (waves_.phase() == WavePhase::Victory) {
-        message_ = "All three waves cleared; R to restart";
+        effects_.setOutcome(EffectOutcome::Defeat);
+        audio_.play(SoundCue::Defeat);
+        message_ = "Sun Crystal captured";
+    } else {
+        // Resolve a freshly cleared final wave in the same rendered frame.
+        waves_.update(0.0f, enemies_);
+        if (waves_.phase() == WavePhase::Victory) {
+            effects_.setOutcome(EffectOutcome::Victory);
+            audio_.play(SoundCue::Victory);
+            message_ = "All three waves cleared";
+        }
     }
+    effects_.update(deltaTime);
+}
+
+void WavePractice::updatePresentation(float deltaTime) {
+    effects_.update(deltaTime);
 }
 
 void WavePractice::drawHealthBar(const Camera2D& camera, float x,
@@ -219,18 +262,8 @@ void WavePractice::render(const Camera2D& camera) const {
         renderer_.drawRect(camera, {coin.x - 3.0f, coin.y - 3.0f},
                            {6.0f, 6.0f}, {1.0f, 0.95f, 0.56f, 1.0f}, 45.0f);
     }
-    for (const ImpactEffect& impact : combat_.impacts()) {
-        const float progress = 1.0f - std::clamp(impact.remaining / 0.18f,
-                                                  0.0f, 1.0f);
-        const float side = 8.0f + progress * 10.0f;
-        const glm::vec4 color = impact.kind == AttackKind::SunArrow ||
-                impact.kind == AttackKind::KhopeshStrike
-                ? glm::vec4(1.0f, 0.87f, 0.33f, 0.8f * (1.0f - progress))
-                : glm::vec4(0.55f, 0.29f, 0.74f, 0.8f * (1.0f - progress));
-        renderer_.drawRect(camera,
-                           {impact.x - side * 0.5f, impact.y - side * 0.5f},
-                           {side, side}, color, 45.0f);
-    }
+    if (effects_.outcome() == EffectOutcome::None)
+        EffectRenderer::render(camera, renderer_, effects_);
     hud_.render(camera, economyView_, selectedType_, hoveredCard_);
     renderer_.drawRect(camera, {348, 10}, {226, 126},
                        {0.92f, 0.67f, 0.31f, 0.9f});
@@ -264,14 +297,16 @@ void WavePractice::render(const Camera2D& camera) const {
                {1.0f, 0.88f, 0.55f, 1});
 }
 
+void WavePractice::renderEffects(const Camera2D& camera) const {
+    EffectRenderer::render(camera, renderer_, effects_);
+}
+
 void WavePractice::reset() {
-    guardians_.clear();
-    enemies_.clear();
-    combat_.reset();
-    waves_.reset();
-    economy_.reset();
+    SessionReset::run(guardians_, enemies_, combat_, waves_, economy_, effects_);
+    audio_.clearEffects();
     selectedType_ = GuardianType::Khopesh;
     hoveredCard_.reset();
+    hoveredLane_ = -1;
     defeated_ = 0;
     shieldScenario_ = false;
     guardianAhead_ = false;
@@ -296,6 +331,22 @@ void WavePractice::openPreview() {
         enemy.position.x = 820.0f;
     combat_.update(0.1f, {}, guardians_, enemies_);
     message_ = "Module 5 visual preview";
+}
+
+void WavePractice::openEffectPreview() {
+    openPreview();
+    effects_.emit({EffectEventKind::GoldImpact, 480.0f, 206.0f});
+    effects_.emit({EffectEventKind::CurseImpact, 690.0f, 306.0f});
+    effects_.emit({EffectEventKind::CoinPickup, 520.0f, 494.0f});
+    effects_.update(0.16f);
+    message_ = "Event-driven visual effect preview";
+}
+
+void WavePractice::openOutcomePreview(bool victory) {
+    reset();
+    effects_.setOutcome(victory ? EffectOutcome::Victory
+                                : EffectOutcome::Defeat);
+    effects_.update(0.25f);
 }
 
 std::string WavePractice::statusText(bool debugControls) const {

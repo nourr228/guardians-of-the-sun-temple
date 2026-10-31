@@ -16,7 +16,7 @@ public:
             : renderer_(renderer), text_(text) {}
 
     void render(const Camera2D& camera, const MenuManager& menu,
-                glm::vec2 mouse) const;
+                glm::vec2 mouse, float volume, bool muted) const;
 
 private:
     const Renderer2D& renderer_;

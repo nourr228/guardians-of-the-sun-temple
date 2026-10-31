@@ -13,9 +13,11 @@ find_path(STB_INCLUDE_DIR stb_image.h REQUIRED)
 
 add_executable(Guardians_of_the_Sun_Temple
         main.cpp
+        src/audio/AudioManager.cpp
         src/combat/CombatSystem.cpp
         src/core/Game.cpp
         src/core/InputManager.cpp
+        src/core/SessionReset.cpp
         src/cutscene/CutsceneManager.cpp
         src/cutscene/CutsceneRenderer.cpp
         src/demo/CharacterShowcase.cpp
@@ -24,6 +26,8 @@ add_executable(Guardians_of_the_Sun_Temple
         src/economy/EconomyHud.cpp
         src/economy/EconomyManager.cpp
         src/economy/PurchaseSystem.cpp
+        src/effects/EffectManager.cpp
+        src/effects/EffectRenderer.cpp
         src/entities/Enemy.cpp
         src/entities/Guardian.cpp
         src/rendering/Animator.cpp
@@ -46,7 +50,8 @@ add_executable(Guardians_of_the_Sun_Temple
         src/world/TempleEnvironment.cpp
 )
 
-target_include_directories(Guardians_of_the_Sun_Temple PRIVATE src "${STB_INCLUDE_DIR}")
+target_include_directories(Guardians_of_the_Sun_Temple PRIVATE src "${STB_INCLUDE_DIR}"
+        third_party/miniaudio)
 target_compile_definitions(Guardians_of_the_Sun_Temple PRIVATE
         GLFW_INCLUDE_NONE
         GOST_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
@@ -168,6 +173,31 @@ if (BUILD_TESTING)
     target_include_directories(cutscene_tests PRIVATE src)
     target_link_libraries(cutscene_tests PRIVATE glm::glm)
     add_test(NAME cutscene_tests COMMAND cutscene_tests)
+    add_executable(effect_tests
+            tests/effect_tests.cpp
+            src/effects/EffectManager.cpp
+    )
+    target_include_directories(effect_tests PRIVATE src)
+    target_link_libraries(effect_tests PRIVATE glm::glm)
+    add_test(NAME effect_tests COMMAND effect_tests)
+    add_executable(flow_tests
+            tests/flow_tests.cpp
+            src/combat/CombatSystem.cpp
+            src/core/SessionReset.cpp
+            src/economy/EconomyManager.cpp
+            src/effects/EffectManager.cpp
+            src/entities/Enemy.cpp
+            src/entities/Guardian.cpp
+            src/rendering/Animator.cpp
+            src/systems/EnemyManager.cpp
+            src/systems/EnemySpawner.cpp
+            src/systems/GuardianManager.cpp
+            src/systems/WaveManager.cpp
+            src/world/Battlefield.cpp
+    )
+    target_include_directories(flow_tests PRIVATE src)
+    target_link_libraries(flow_tests PRIVATE glm::glm)
+    add_test(NAME flow_tests COMMAND flow_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
@@ -184,6 +214,10 @@ if (BUILD_TESTING)
         set_tests_properties(menu_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(cutscene_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(effect_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(flow_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

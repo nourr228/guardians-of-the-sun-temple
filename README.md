@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple
 
-Modules 1-9 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, unified combat, Sun Coin economy, gameplay HUD, menus, and a 16-second animated introduction. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-10 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, unified combat, Sun Coin economy, gameplay HUD, menus, a 16-second animated introduction, game flow, visual effects, and audio. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
 
@@ -28,29 +28,38 @@ Modules 1-9 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six anim
 
 ![Cutscene defenders assemble](docs/cutscene-13_9.png)
 
+![Sound Settings](docs/sound-settings-preview.png)
+
+![Combat visual effects](docs/effects-preview.png)
+
+![Victory with crystal effects](docs/outcome-win-preview.png)
+
+![Defeat with crystal effects](docs/outcome-lose-preview.png)
+
 ## Build and run
 
 Open this directory in CLion using the existing CMake profile, vcpkg toolchain, and `x64-mingw-dynamic` triplet. Build and run `Guardians_of_the_Sun_Temple`. The vcpkg manifest installs GLFW, GLAD, GLM, and stb.
 
-On Windows, the build copies GLFW and the MinGW runtime DLLs beside the executable, so the built game can also launch directly from `cmake-build-debug/`. The game opens at the Main Menu.
+On Windows, the build copies GLFW and the MinGW runtime DLLs beside the executable, so the built game can also launch directly from `cmake-build-debug/`. The game opens at the Main Menu. Audio uses the bundled miniaudio header and procedurally generated music and effects, so no sound assets need downloading. If no playback device is available, the game continues silently.
 
 The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600 logical world with letterboxing. Mouse input is converted through the active viewport, so lane selection continues to align after resizing and on high-DPI displays.
 
 ## Play the game
 
-- Click **Start Game** on the Main Menu. The 16-second introduction plays before the preparation screen. During the cutscene, **Space** skips to gameplay and **Escape** returns to the Main Menu. The preparation screen starts with 30 Sun Coins. Khopesh is available; the other two cards are gray and locked.
+- On the Main Menu, **Sound Settings** opens volume down/up, mute, and Back controls. Music plays continuously when an audio device is available. Click **Start Game**. The 16-second introduction plays before the preparation screen. During the cutscene, **Space** skips to gameplay and **Escape** returns to the Main Menu. The preparation screen starts with 30 Sun Coins. Khopesh is available; the other two cards are gray and locked.
 - Click a path to select or deselect it. Several paths can stay selected. Hover the intended selected path if several are selected.
 - Click an available guardian card or press 1/2/3, then press P to purchase it in the selected path. The HUD updates the balance immediately. A failed purchase does not charge coins.
 - Press Enter to begin Wave 1. W/Up jumps and S/Down ducks guardians in selected paths. Guardian and enemy health bars stay above their models.
 - A defeated enemy drops a coin; a guardian must touch it to collect 10 Sun Coins. Archer becomes eligible after two pickups and Sentinel after three. Cards also require enough current coins, so they can gray out again after spending.
 - Press Escape to pause. Click Continue, Restart, or Main Menu. Victory and defeat each offer Restart and Main Menu. The Main Menu has Exit Game.
 - The wave, spawned count, remaining enemies, balance, pickups, card names, costs, and availability appear on screen.
+- Gold particles mark arrow impacts and coin pickups; purple/turquoise particles mark cursed hits; the shrine emits a gold victory fountain or a dark defeat fountain. Sounds distinguish selection, purchase, arrow, curse, pickup, damage, victory, and defeat.
 
 An uninterrupted opening shows the crystal, the cursed army's arrival, the Pharaoh and Guardian confronting one another, the Archer and Sentinel responding, and a gold transition into gameplay. Restart from Pause, Victory, or Defeat returns directly to gameplay; choosing Start Game again from the Main Menu replays the cutscene.
 
 ## Development inspection modes
 
-- During gameplay, F4 opens or closes Guardian Practice. F5 switches back to the wave view or toggles it with the character showcase. These shortcuts enable the earlier practice controls.
+- Set `GOST_DEBUG=1` in the CLion run configuration environment variables to enable F4/F5 inspection shortcuts and the older test keys. In a normal run these shortcuts are disabled. During gameplay, F4 opens or closes Guardian Practice. F5 switches back to the wave view or toggles it with the character showcase.
 - In the showcase, F3 shows or hides the six-character lineup. Keys 1-7 select Idle, Moving, Attacking, Jumping, Ducking, TakingDamage, or Dying. Press 0 to resume automatic cycling, H to step through health tint, and R to restore full health.
 
 ## Test the guardians (F4)
@@ -93,7 +102,7 @@ The six characters are built from code-drawn shapes and articulated parts, so no
 
 ## Tests
 
-Run `ctest --test-dir cmake-build-debug --output-on-failure`. The eight suites cover lane geometry, animation, guardian movement, exact wave composition, combat rules, economy transactions, menu transitions, and cutscene timing at different frame rates.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. The ten suites cover lane geometry, animation, guardian movement, exact wave composition, combat rules, economy transactions, menu transitions, cutscene timing, effect lifetimes, and session reset. Audio setting bounds and mute toggling are checked without requiring an audio device.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
@@ -109,6 +118,8 @@ Set `GOST_UI_PREVIEW` to `play`, `pause`, `win`, or `lose` with `GOST_CAPTURE_PA
 
 Set `GOST_CUTSCENE_PREVIEW_TIME` to a time between 0 and 16 seconds with `GOST_CAPTURE_PATH` to capture a specific cutscene moment. Example values: `1.5`, `5.8`, `11.4`, and `13.9`.
 
+Set `GOST_SOUND_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture Sound Settings. Set `GOST_EFFECT_PREVIEW=1` to capture sample gold, curse, and pickup particles. Set `GOST_UI_PREVIEW=win` or `lose` to capture the end menus with their outcome particles.
+
 ## Source layout
 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
@@ -119,6 +130,9 @@ Set `GOST_CUTSCENE_PREVIEW_TIME` to a time between 0 and 16 seconds with `GOST_C
 - `src/economy/`: spendable currency, pickup credit, card availability, purchasing, and gameplay HUD.
 - `src/ui/`: OpenGL font atlases, menu state and button hit testing, themed menu rendering.
 - `src/cutscene/`: independent 16-second actor timeline, dialogue cues, effects, and cutscene rendering.
+- `src/effects/`: combat event driven particle effects and terminal shrine fountains.
+- `src/audio/`: generated music and sound cues, volume/mute settings, miniaudio playback.
 - `src/demo/`: playable wave session plus character and guardian inspection modes.
 
 Cinzel and Noto Sans are bundled in `assets/fonts/` under their included Open Font License files. The source fonts are from the Google Fonts repository.
+miniaudio is bundled in `third_party/miniaudio/` with its license. The generated sounds are original to this project.

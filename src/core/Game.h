@@ -22,6 +22,7 @@ class TextRenderer;
 class MenuRenderer;
 class CutsceneManager;
 class CutsceneRenderer;
+class AudioManager;
 
 class Game {
 public:
@@ -35,6 +36,7 @@ public:
 
 private:
     void initialize();
+    void resetSession();
     void update(float deltaTime);
     void render() const;
 
@@ -55,10 +57,12 @@ private:
     std::unique_ptr<MenuRenderer> menuRenderer_;
     std::unique_ptr<CutsceneManager> cutscene_;
     std::unique_ptr<CutsceneRenderer> cutsceneRenderer_;
+    std::unique_ptr<AudioManager> audio_;
     MenuManager menus_;
     std::string windowTitle_;
     bool practiceVisible_ = false;
     bool wavePracticeVisible_ = false;
     bool debugControls_ = false;
+    bool debugEnabled_ = false;
     float revealRemaining_ = 0.0f;
 };

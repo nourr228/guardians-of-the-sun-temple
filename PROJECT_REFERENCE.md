@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. Modules 1-9 are implemented.
+This is the reference for module-by-module implementation. Modules 1-10 are implemented.
 
 ## Sources and priority
 
@@ -155,3 +155,12 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - The `CutsceneRenderer` reuses the existing temple environment, shrine, detailed character models, `Animator`, and text atlas. Dialogue is subtitled in a cinematic band while characters move and interact. It requires no new external art or audio.
 - Space skips to gameplay. Escape returns to the Main Menu. Restart from Pause/Victory/Defeat goes directly to a clean gameplay session; Start Game from the Main Menu replays the cutscene. During the cutscene, battlefield input and gameplay systems do not update.
 - `cutscene_tests` checks key timed cues, actor appearance and motion, animation poses, skip/reset, and exactly 16-second completion at 30, 60, and 144 Hz. All eight suites pass. Six direct OpenGL captures in `docs/cutscene-*.png` document the story beats and transition.
+
+### Module 10 - Game Flow, Visual Effects, and Audio
+
+- The existing `GameScreen` state machine coordinates Main Menu, Cutscene, Playing, Paused, Victory, and Defeat. Start begins the 16-second cutscene; its completion enters gameplay. Escape pauses or resumes, and menu actions handle Continue, Restart, and Main Menu. Simulation stops on pause and on either terminal outcome.
+- A single session reset clears guardians, enemies, projectiles, collectibles, wave progress, Sun Coin balance and eligibility, effect particles, debug fixtures, lane selection, and environment animation. Restart returns directly to a fresh 30-coin preparation screen; Start from Main Menu replays the introduction. Sound settings persist across session restarts.
+- The combat system publishes visual events for arrow and curse launches, gold and cursed impacts, coin pickups, and enemy defeats. `EffectManager` turns them into brief particles without affecting damage rules. Victory and defeat set distinct ongoing shrine fountains. Effects continue animating on the terminal menus while gameplay remains frozen.
+- The optional audio bonus uses the bundled miniaudio header under its included license. Music and eight cues are synthesized in code: selection, purchase, arrow, curse, pickup, damage, victory, and defeat. Main Menu Sound Settings has volume down, volume up, mute, and Back; audio failure falls back to silent gameplay.
+- F4/F5 and the earlier debug scenario controls are enabled only with `GOST_DEBUG=1` or a specific preview environment variable. Normal play cannot switch into those inspection modes.
+- `effect_tests` checks particle creation, expiry, terminal outcomes, reset, volume bounds, and mute. `flow_tests` checks that an active combat/economy/wave session returns to its initial state. The complete test set has ten suites. Direct OpenGL captures in `docs/sound-settings-preview.png`, `docs/effects-preview.png`, and `docs/outcome-*-preview.png` document the new screens and effects.
