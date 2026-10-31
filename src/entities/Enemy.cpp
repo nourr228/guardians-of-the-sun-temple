@@ -13,6 +13,9 @@ EnemyStats enemyStats(EnemyType type) {
     case EnemyType::Pharaoh:
         return {7, 2, 57.0f, 1.05f, 19.0f,
                 EnemyAttackType::Melee, CharacterType::CursedPharaoh};
+    case EnemyType::TrainingDummy:
+        return {5, 0, 0.0f, 1.0f, 18.0f,
+                EnemyAttackType::None, CharacterType::CursedScarab};
     }
     return {5, 1, 31.0f, 1.65f, 18.0f,
             EnemyAttackType::UpperRanged, CharacterType::CursedScarab};
@@ -23,6 +26,7 @@ const char* enemyName(EnemyType type) {
     case EnemyType::Scarab: return "Cursed Scarab";
     case EnemyType::Serpent: return "Sand Serpent";
     case EnemyType::Pharaoh: return "Cursed Pharaoh";
+    case EnemyType::TrainingDummy: return "Training Dummy";
     }
     return "Unknown";
 }

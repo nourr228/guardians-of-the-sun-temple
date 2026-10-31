@@ -13,32 +13,13 @@
 GuardianPractice::GuardianPractice(const Battlefield& battlefield,
                                    const Renderer2D& renderer)
         : battlefield_(battlefield), renderer_(renderer),
-          characters_(renderer), guardians_(battlefield) {}
+          characters_(renderer), guardians_(battlefield),
+          enemies_(battlefield), combat_(battlefield) {}
 
 bool GuardianPractice::spend(int amount) {
     if (amount < 0 || amount > coins_) return false;
     coins_ -= amount;
     return true;
-}
-
-std::vector<EnemyTarget> GuardianPractice::targets() const {
-    std::vector<EnemyTarget> result;
-    for (const Dummy& dummy : dummies_)
-        if (dummy.health > 0)
-            result.push_back({dummy.id, dummy.laneId, dummy.x, 18.0f});
-    return result;
-}
-
-void GuardianPractice::applyDamage(std::uint64_t id, int damage) {
-    for (Dummy& dummy : dummies_) {
-        if (dummy.id != id || dummy.health <= 0) continue;
-        dummy.health = std::max(0, dummy.health - damage);
-        if (dummy.health == 0) message_ = "Target defeated; guardians resume";
-        break;
-    }
-    std::erase_if(dummies_, [](const Dummy& dummy) {
-        return dummy.health <= 0;
-    });
 }
 
 int GuardianPractice::inputLane() const {
@@ -74,10 +55,13 @@ void GuardianPractice::handleInput(const InputManager& input,
         if (lane < 0) {
             message_ = "Select a lane for the target";
         } else {
-            std::erase_if(dummies_, [lane](const Dummy& dummy) {
-                return dummy.laneId == lane;
-            });
-            dummies_.push_back({nextDummyId_++, lane, 470.0f, 5});
+            for (Enemy& enemy : enemies_.enemies())
+                if (enemy.type == EnemyType::TrainingDummy &&
+                    enemy.laneId == lane && enemy.alive)
+                    enemies_.applyDamage(enemy.id, 100);
+            const std::uint64_t id = enemies_.spawn(EnemyType::TrainingDummy, lane);
+            for (Enemy& enemy : enemies_.enemies())
+                if (enemy.id == id) enemy.position.x = 470.0f;
             message_ = "Training target placed in lane " +
                        std::to_string(lane + 1);
         }
@@ -85,9 +69,10 @@ void GuardianPractice::handleInput(const InputManager& input,
     if (input.keyPressed(GLFW_KEY_K)) {
         const int lane = inputLane();
         if (lane >= 0) {
-            std::erase_if(dummies_, [lane](const Dummy& dummy) {
-                return dummy.laneId == lane;
-            });
+            for (Enemy& enemy : enemies_.enemies())
+                if (enemy.type == EnemyType::TrainingDummy &&
+                    enemy.laneId == lane && enemy.alive)
+                    enemies_.applyDamage(enemy.id, 100);
             message_ = "Training target removed";
         }
     }
@@ -109,21 +94,22 @@ void GuardianPractice::update(float deltaTime, const InputManager& input) {
                            input.keyPressed(GLFW_KEY_UP);
     controls.duckHeld = input.keyDown(GLFW_KEY_S) ||
                         input.keyDown(GLFW_KEY_DOWN);
-    guardians_.update(deltaTime, controls, *this);
+    combat_.update(deltaTime, controls, guardians_, enemies_);
 }
 
 void GuardianPractice::render(const Camera2D& camera) const {
     // The training target is a distinct marker, not a final enemy model.
-    for (const Dummy& dummy : dummies_) {
+    for (const Enemy& dummy : enemies_.enemies()) {
+        if (!dummy.alive) continue;
         const float feet = battlefield_.lane(dummy.laneId).bottom - 9.0f;
-        renderer_.drawRect(camera, {dummy.x - 19.0f, feet - 63.0f},
+        renderer_.drawRect(camera, {dummy.position.x - 19.0f, feet - 63.0f},
                            {38.0f, 63.0f}, {0.38f, 0.19f, 0.13f, 1.0f});
-        renderer_.drawRect(camera, {dummy.x - 13.0f, feet - 57.0f},
+        renderer_.drawRect(camera, {dummy.position.x - 13.0f, feet - 57.0f},
                            {26.0f, 39.0f}, {0.77f, 0.52f, 0.29f, 1.0f});
-        renderer_.drawRect(camera, {dummy.x - 17.0f, feet - 69.0f},
+        renderer_.drawRect(camera, {dummy.position.x - 17.0f, feet - 69.0f},
                            {34.0f, 5.0f}, {0.95f, 0.72f, 0.26f, 1.0f});
-        renderer_.drawRect(camera, {dummy.x - 16.0f, feet - 68.0f},
-                           {32.0f * dummy.health / 5.0f, 3.0f},
+        renderer_.drawRect(camera, {dummy.position.x - 16.0f, feet - 68.0f},
+                           {32.0f * dummy.healthRatio(), 3.0f},
                            {0.23f, 0.86f, 0.57f, 1.0f});
     }
     for (const Guardian& guardian : guardians_.guardians()) {
@@ -141,11 +127,21 @@ void GuardianPractice::render(const Camera2D& camera) const {
                            {42.0f * guardian.healthRatio(), 4.0f},
                            {0.33f, 0.86f, 0.49f, 1.0f});
     }
-    for (const SunArrow& arrow : guardians_.arrows()) {
+    for (const Projectile& arrow : combat_.projectiles()) {
+        if (arrow.kind != AttackKind::SunArrow) continue;
         renderer_.drawRect(camera, {arrow.x - 11.0f, arrow.y - 2.0f},
                            {20.0f, 4.0f}, {1.0f, 0.9f, 0.41f, 1.0f});
         renderer_.drawRect(camera, {arrow.x + 5.0f, arrow.y - 4.0f},
                            {7.0f, 8.0f}, {1.0f, 0.96f, 0.67f, 1.0f});
+    }
+    for (const ImpactEffect& impact : combat_.impacts()) {
+        const float progress = 1.0f - std::clamp(impact.remaining / 0.18f,
+                                                  0.0f, 1.0f);
+        const float side = 8.0f + progress * 10.0f;
+        renderer_.drawRect(camera,
+                {impact.x - side * 0.5f, impact.y - side * 0.5f},
+                {side, side},
+                {1.0f, 0.87f, 0.33f, 0.8f * (1.0f - progress)}, 45.0f);
     }
     // Simple card markers; the final card UI belongs to Module 7.
     constexpr glm::vec4 gold{0.91f, 0.67f, 0.23f, 1.0f};
@@ -167,9 +163,9 @@ void GuardianPractice::render(const Camera2D& camera) const {
 
 void GuardianPractice::reset() {
     guardians_.clear();
-    dummies_.clear();
+    enemies_.clear();
+    combat_.reset();
     coins_ = 30;
-    nextDummyId_ = 1;
     message_ = "Practice reset";
 }
 
@@ -179,8 +175,11 @@ void GuardianPractice::openPreview() {
     guardians_.tryPlace(GuardianType::Khopesh, 0, *this);
     guardians_.tryPlace(GuardianType::Sentinel, 1, *this);
     guardians_.tryPlace(GuardianType::Archer, 2, *this);
-    dummies_.push_back({nextDummyId_++, 0, 470.0f, 5});
-    dummies_.push_back({nextDummyId_++, 2, 470.0f, 5});
+    for (int lane : {0, 2}) {
+        const auto id = enemies_.spawn(EnemyType::TrainingDummy, lane);
+        for (Enemy& enemy : enemies_.enemies())
+            if (enemy.id == id) enemy.position.x = 470.0f;
+    }
     message_ = "Module 4 preview";
 }
 

@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "combat/CombatSystem.h"
 #include "rendering/CharacterRenderer.h"
 #include "systems/EnemyManager.h"
 #include "systems/GuardianManager.h"
@@ -37,10 +38,13 @@ private:
     CharacterRenderer characters_;
     GuardianManager guardians_;
     EnemyManager enemies_;
+    CombatSystem combat_;
     WaveManager waves_;
     GuardianType selectedType_ = GuardianType::Khopesh;
     int hoveredLane_ = -1;
     int coins_ = 999;
     int defeated_ = 0;
+    bool shieldScenario_ = false;
+    bool guardianAhead_ = false;
     std::string message_ = "Place guardians, then Enter to start";
 };

@@ -7,8 +7,8 @@
 #include "rendering/Animator.h"
 #include "world/Battlefield.h"
 
-enum class EnemyType { Scarab, Serpent, Pharaoh };
-enum class EnemyAttackType { UpperRanged, LowerRanged, Melee };
+enum class EnemyType { Scarab, Serpent, Pharaoh, TrainingDummy };
+enum class EnemyAttackType { UpperRanged, LowerRanged, Melee, None };
 enum class EnemyBehavior { Advancing, Engaged, Attacking, TakingDamage, Dying };
 
 struct EnemyStats {

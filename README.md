@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple
 
-Modules 1-5 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three playable guardian types, and the three enemy waves. The final economy UI, combat refinements, and menu systems remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
+Modules 1-6 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six animated character models, three guardian types, three enemy waves, and unified combat. The final spendable coin economy, menus, and progression presentation remain for later modules. The assignment requirements and theme mapping are in [PROJECT_REFERENCE.md](PROJECT_REFERENCE.md).
 
 ![Battlefield preview](docs/battlefield-preview.png)
 
@@ -9,6 +9,8 @@ Modules 1-5 provide the C++20/OpenGL 3.3 engine, four-lane battlefield, six anim
 ![Guardian practice preview](docs/guardian-practice-preview.png)
 
 ![Enemy wave preview](docs/wave-practice-preview.png)
+
+![Unified combat preview](docs/combat-preview.png)
 
 ## Build and run
 
@@ -36,7 +38,7 @@ The window begins at 1000 x 600 and can be resized. The scene keeps a 1000 x 600
 - Press W or Up to make all movable guardians in selected lanes jump; hold S or Down to duck. The Sentinel stays still and never jumps or ducks.
 - Press H to damage all guardians in the chosen lane by 1 point; their gold-bordered health bars shrink and models redden. Press R to reset guardians, targets, and wallet so each type can be tried from the initial balance.
 
-This is a temporary test mode. Training targets, wallet, and card markers will be replaced by later modules. The Sentinel's protection calculation is planned for the combat module.
+This is a temporary test mode. Training targets, wallet, and card markers will be replaced by later modules. F4 now uses the same combat collision and damage rules as F5.
 
 ## Test the enemy waves (F5)
 
@@ -46,6 +48,13 @@ This is a temporary test mode. Training targets, wallet, and card markers will b
 - Use W/Up to jump over low Serpent attacks and hold S/Down to duck under high Scarab attacks. Pharaohs strike at close range for 2 damage. Enemy and guardian health bars show their remaining HP.
 - To inspect wave transitions quickly, press K to defeat current enemies. If the wave is still spawning, later enemies will still appear. The next wave begins only after its last spawn and all its enemies are defeated. Press R to reset the mode.
 - If any enemy reaches the shrine, the action stops and the scene darkens. Clearing all three waves produces a gold victory overlay. F5 closes the mode.
+
+## Test combat and Sentinel protection (F5)
+
+- For a repeatable shield test, press **R** in F5, then **T**. This creates a stationary Khopesh Guardian behind a Stone Sentinel and a nearby Scarab in lane 1. The first high cursed shots should reduce the Sentinel's health while the Khopesh remains at 5 HP.
+- Press **Y** to move the Khopesh ahead of the Sentinel. Later shots should damage the Khopesh directly. Press Y again to return it behind the shield.
+- Press **H** to destroy the Sentinel. Subsequent shots can now hit the guardian behind it. Press **R** to clear this test before starting the normal waves.
+- In normal waves, defeated enemies leave gold Sun Coins at their defeat positions. A guardian collects a coin by touching it; the window title shows the pickup count. This pickup event is ready for Module 7, where it will increase spendable currency.
 
 ## World coordinates
 
@@ -59,7 +68,7 @@ The six characters are built from code-drawn shapes and articulated parts, so no
 
 ## Tests
 
-Run `ctest --test-dir cmake-build-debug --output-on-failure`. `world_geometry_tests` checks lane and coordinate rules, `animator_tests` checks animation timing, `guardian_tests` checks guardian mechanics, and `enemy_wave_tests` checks enemy attacks, damage, movement, spawning, and wave transitions.
+Run `ctest --test-dir cmake-build-debug --output-on-failure`. The five suites cover lane geometry, animation, guardian placement and movement, exact wave composition and gating, and combat damage, dodge, shielding, projectile removal, pickups, and shrine breach.
 
 For a one-frame OpenGL capture, set `GOST_CAPTURE_PATH` to a PNG path before running the game. The application renders one frame, saves it, then exits.
 
@@ -74,5 +83,6 @@ Set `GOST_WAVE_PREVIEW=1` with `GOST_CAPTURE_PATH` to capture a sample F5 enemy 
 - `src/core/`: GLFW/GLAD lifecycle, delta-time loop, and input state.
 - `src/rendering/`: shader and texture ownership, indexed quads and polygon renderer, sprites, orthographic camera, character models, and animator.
 - `src/world/`: lane geometry and selection, shrine boundary, and temple environment.
-- `src/entities/` and `src/systems/`: shared guardian/enemy state, attacks, projectiles, random spawning, and wave phases.
+- `src/entities/` and `src/systems/`: guardian/enemy state, placement, random spawning, and wave phases.
+- `src/combat/`: central contact, attack, projectile, damage, protection, and coin pickup rules.
 - `src/demo/`: character showcase and temporary guardian/wave practice modes.
