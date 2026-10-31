@@ -1,6 +1,6 @@
 # Guardians of the Sun Temple - project reference
 
-This is the reference for module-by-module implementation. Modules 1-7 are implemented; final menus and progression presentation remain future work.
+This is the reference for module-by-module implementation. Modules 1-8 are implemented; the opening cutscene remains future work.
 
 ## Sources and priority
 
@@ -88,7 +88,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - Implemented in `src/core/` and `src/rendering/`: application lifecycle, GLFW/GLAD setup, OpenGL 3.3 Core Profile, delta-time loop, event-based input, world-space mouse mapping, orthographic camera, shader and texture ownership, a shared indexed quad renderer, sprite interface, and resource manager.
 - The logical world is 1000 x 600, letterboxed to preserve geometry on window resize. W/S/Up/Down input remains available for later guardian controls.
 - Development build uses C++20, GLFW, GLAD, GLM, and stb through vcpkg. The local CLion toolchain is `x64-mingw-dynamic`; ensure its MinGW `bin` directory is first on `PATH` when building from a separate terminal.
-- The engine and rendering layer are reused by the guardian, enemy, combat, and economy modules. Menus and cutscene systems are still future work.
+- The engine and rendering layer are reused by the guardian, enemy, combat, economy, and menu modules. The cutscene remains future work.
 
 ### Module 2 - Battlefield, Lanes, and Temple Environment
 
@@ -120,7 +120,7 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 - `Enemy` stores unique ID, fixed lane, position, speed, health, attack type/damage/cooldown, behavior, alive state, and `Animator`. Scarab and Serpent each have 5 HP and 1-damage ranged attacks; the faster Pharaoh has 7 HP and a 2-damage melee attack. All three keep attacking on their cadence while active, with damage applied only when a target is reached. Enemy damage uses the existing progressive red tint and death animation.
 - `EnemyManager` owns enemy instances and one-shot defeat events. Module 6 now moves enemies left, stops them at guardian contact, owns high/low cursed projectiles, applies 1 damage to the first eligible guardian on their path, and honors ducking against high shots and jumping against low shots. Pharaoh contact strikes deal 2 damage. The central combat path reports shrine breach as soon as an enemy's left edge reaches X=154 and turns each enemy defeat into a collectible drop.
 - `EnemySpawner` uses a seedable random generator to shuffle permitted enemy types and choose a random lane on each spawn. `WaveManager` has Ready, Spawning, Clearing, Victory, and Defeat phases. The planned populations are 3 Scarabs; 3 Scarabs plus 2 Serpents; and 4 Scarabs plus 3 Serpents plus 3 Pharaohs. Finishing the last spawn enters Clearing; the next wave begins only when no enemy from the current wave is alive.
-- F5 opens temporary Wave Practice mode. It uses the existing guardian placement and movement controls, plus Enter to start, K to defeat active enemies for transition inspection, and R to reset. Module 7 now gives this mode the real 30-coin starting balance, card availability, and pickup rewards. The window title shows wave, phase, spawned/total, living count, currency, pickup count, and defeat count. A gold or dark overlay signals victory or shrine breach. F4 training mode and F3 animation showcase remain available separately.
+- The wave view is now the playable session launched from the Main Menu. Enter starts Wave 1 after placement. Its earlier K/R/T/Y/H diagnostics remain available after entering debug mode with F5. The window title shows wave, phase, spawned/total, living count, currency, pickup count, and defeat count. Victory or shrine breach opens a themed result menu. F4 training mode and F3 animation showcase remain available separately.
 - `enemy_wave_tests` verifies stats, lane validity and retention, attack creation, defeat events, exact wave composition, clearing gates, deterministic spawning, and terminal states. `docs/wave-practice-preview.png` is a direct OpenGL capture of all three enemy models in the battlefield.
 
 ### Module 6 - Combat, Projectiles, Collision, and Damage
@@ -135,6 +135,15 @@ Each type needs a distinctive model, silhouette, equipment, and animation. Color
 
 - The approved economy rule is: start with 30 spendable Sun Coins; Khopesh costs 10 and is the only initially eligible card; Archer costs 20 and becomes eligible after two collected enemy drops; Sentinel costs 30 and becomes eligible after three collected drops. Each collected drop is worth 10 Sun Coins. Kills without pickup do not pay. Eligibility is based on lifetime pickups, while the card's current active state also requires enough spendable balance; spending below its price immediately grays it out again.
 - `EconomyManager` tracks balance, lifetime collection value/count, processed coin IDs, and a change callback carrying an `EconomySnapshot` for Module 8. Duplicate pickup IDs cannot credit twice. `PurchaseSystem` checks playing state, valid lane, eligibility, and funds before calling guardian placement once; failures leave both balance and guardian count unchanged.
-- F5 now uses this real economy rather than 999 practice coins. A compact in-game panel shows the numeric Sun Coin balance and three card emblems with costs; inactive cards are gray and ignore mouse selection. Keyboard 1/2/3 and clicking active cards select a guardian; P purchases it in a selected lane. The window title also reports balance and pickup count. Full menu and card presentation remain Module 8 work.
+- The playable wave session uses this real economy rather than 999 practice coins. The Module 8 HUD shows Sun Coin balance, pickups, and three named cards with costs and statuses; inactive cards are grayscale and ignore mouse selection. Keyboard 1/2/3 and clicking active cards select a guardian; P purchases it in a selected lane. The window title also reports balance and pickup count.
 - F5's T/Y/H shield scenario is an isolated test fixture that directly creates its characters without changing the wallet; R restores the real 30-coin start before normal waves. F4 remains a separate guardian-only training fixture.
 - `economy_tests` verifies the 30-coin initial state, 10/20/30 prices, only-Melee availability, two/three-pickup activation, immediate callback updates, duplicate pickup rejection, relocking after spending, reset, playing/lane/card/funds purchase failures, and a real combat pickup credit. All six suites pass. `docs/economy-start-preview.png` and `docs/economy-unlocked-preview.png` are direct OpenGL captures.
+
+### Module 8 - HUD, Character Cards, and Game Menus
+
+- The game launches at a Main Menu with Start Game and Exit Game. Start resets the wave session and opens its preparation state. Escape during play opens a Pause Menu with Continue, Restart, and Main Menu. Clearing all waves opens Victory; shrine breach opens Defeat. Both result menus offer Restart and Main Menu. Menu actions and gameplay are mutually exclusive, and pause/terminal states stop simulation updates.
+- `TextRenderer` bakes Open Font License Cinzel and Noto Sans glyphs into OpenGL atlases using the existing stb dependency. The fonts and license texts are bundled in `assets/fonts/`. Text uses the same letterboxed world coordinates as the battlefield.
+- The HUD includes balance, pickup count, wave number and progress, a help/footer message, and three named guardian cards with icons, costs, active/locked/insufficient-funds states, and selected/hovered borders. The economy snapshot updates it immediately. Existing gold-bordered health bars and full-lane hover/selection highlights remain in use.
+- Game input checks menu buttons first, then the HUD, then the battlefield. Menu and card clicks cannot toggle lanes underneath. The earlier K/R/T/Y/H wave diagnostics are available only after switching into F5 debug mode. Normal restart uses the menu.
+- Victory and defeat screens use different gold and purple crystal effects over the shrine. `menu_tests` covers transitions and button hitboxes; all seven test suites pass. Direct OpenGL captures in `docs/ui-*-preview.png` cover the Main Menu, HUD, pause, victory, defeat, and six-character health bars.
+- The assignment's 10-20 second animated opening cutscene remains outside Module 8; Start Game currently enters playable preparation directly and leaves a transition point for it.

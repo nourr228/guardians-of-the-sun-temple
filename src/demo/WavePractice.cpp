@@ -8,16 +8,22 @@
 #include "core/InputManager.h"
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
+#include "ui/TextRenderer.h"
 #include "world/Battlefield.h"
 
 WavePractice::WavePractice(const Battlefield& battlefield,
-                           const Renderer2D& renderer)
-        : battlefield_(battlefield), renderer_(renderer),
+                           const Renderer2D& renderer,
+                           const TextRenderer& text)
+        : battlefield_(battlefield), renderer_(renderer), text_(text),
           characters_(renderer), guardians_(battlefield),
-          enemies_(battlefield), combat_(battlefield), hud_(renderer) {
+          enemies_(battlefield), combat_(battlefield), hud_(renderer, text) {
     economy_.setOnChange([this](const EconomySnapshot& state) {
         economyView_ = state;
     });
+}
+
+bool WavePractice::uiContains(glm::vec2 world) const {
+    return hud_.contains(world);
 }
 
 int WavePractice::inputLane() const {
@@ -28,11 +34,12 @@ int WavePractice::inputLane() const {
 }
 
 void WavePractice::handleInput(const InputManager& input,
-                               const Camera2D& camera) {
+                               const Camera2D& camera,
+                               bool debugControls) {
     const glm::vec2 mouse = input.mouseWorldPosition(camera);
     hoveredLane_ = battlefield_.laneAt(mouse).value_or(-1);
     hoveredCard_ = hud_.cardAt(mouse);
-    if (input.keyPressed(GLFW_KEY_R)) {
+    if (debugControls && input.keyPressed(GLFW_KEY_R)) {
         reset();
         return;
     }
@@ -52,7 +59,8 @@ void WavePractice::handleInput(const InputManager& input,
     if (input.keyPressed(GLFW_KEY_1)) selectCard(GuardianType::Khopesh);
     if (input.keyPressed(GLFW_KEY_2)) selectCard(GuardianType::Sentinel);
     if (input.keyPressed(GLFW_KEY_3)) selectCard(GuardianType::Archer);
-    if (input.keyPressed(GLFW_KEY_T) && waves_.phase() == WavePhase::Ready) {
+    if (debugControls && input.keyPressed(GLFW_KEY_T) &&
+        waves_.phase() == WavePhase::Ready) {
         if (!guardians_.guardians().empty() || !enemies_.enemies().empty()) {
             message_ = "Press R, then T for the shield test";
         } else {
@@ -68,7 +76,7 @@ void WavePractice::handleInput(const InputManager& input,
             message_ = "Shield test: Y move guardian ahead, H break shield";
         }
     }
-    if (shieldScenario_ && input.keyPressed(GLFW_KEY_Y)) {
+    if (debugControls && shieldScenario_ && input.keyPressed(GLFW_KEY_Y)) {
         guardianAhead_ = !guardianAhead_;
         for (Guardian& guardian : guardians_.guardians())
             if (guardian.type == GuardianType::Khopesh)
@@ -76,7 +84,7 @@ void WavePractice::handleInput(const InputManager& input,
         message_ = guardianAhead_ ? "Guardian ahead of shield" :
                                   "Guardian behind shield";
     }
-    if (shieldScenario_ && input.keyPressed(GLFW_KEY_H)) {
+    if (debugControls && shieldScenario_ && input.keyPressed(GLFW_KEY_H)) {
         for (Guardian& guardian : guardians_.guardians())
             if (guardian.type == GuardianType::Sentinel && guardian.alive)
                 guardian.takeDamage(100);
@@ -115,7 +123,7 @@ void WavePractice::handleInput(const InputManager& input,
             }
         }
     }
-    if (input.keyPressed(GLFW_KEY_K) &&
+    if (debugControls && input.keyPressed(GLFW_KEY_K) &&
         waves_.phase() != WavePhase::Ready &&
         waves_.phase() != WavePhase::Victory &&
         waves_.phase() != WavePhase::Defeat) {
@@ -223,27 +231,37 @@ void WavePractice::render(const Camera2D& camera) const {
                            {impact.x - side * 0.5f, impact.y - side * 0.5f},
                            {side, side}, color, 45.0f);
     }
-    // Three top markers indicate wave progress; final HUD comes later.
-    for (int i = 0; i < 3; ++i) {
-        const bool reached = i + 1 <= waves_.waveNumber() &&
-                             waves_.phase() != WavePhase::Ready;
-        renderer_.drawRect(camera, {445.0f + i * 38.0f, 16.0f},
-                           {28.0f, 16.0f},
-                           reached ? glm::vec4(1.0f, 0.76f, 0.3f, 1.0f)
-                                   : glm::vec4(0.43f, 0.31f, 0.27f, 1.0f));
-    }
     hud_.render(camera, economyView_, selectedType_, hoveredCard_);
-    if (waves_.phase() == WavePhase::Victory ||
-        waves_.phase() == WavePhase::Defeat) {
-        const bool victory = waves_.phase() == WavePhase::Victory;
-        renderer_.drawRect(camera, {0.0f, 0.0f},
-                           {Battlefield::worldWidth, Battlefield::worldHeight},
-                           victory ? glm::vec4(0.85f, 0.53f, 0.12f, 0.24f)
-                                   : glm::vec4(0.15f, 0.02f, 0.19f, 0.5f));
-        renderer_.drawRect(camera, {485.0f, 266.0f}, {30.0f, 68.0f},
-                           victory ? glm::vec4(1.0f, 0.86f, 0.42f, 1.0f)
-                                   : glm::vec4(0.52f, 0.19f, 0.67f, 1.0f));
+    renderer_.drawRect(camera, {348, 10}, {226, 126},
+                       {0.92f, 0.67f, 0.31f, 0.9f});
+    renderer_.drawRect(camera, {351, 13}, {220, 120},
+                       {0.20f, 0.13f, 0.17f, 0.97f});
+    const char* phase = "PREPARE";
+    switch (waves_.phase()) {
+    case WavePhase::Ready: phase = "PREPARE"; break;
+    case WavePhase::Spawning: phase = "SPAWNING"; break;
+    case WavePhase::Clearing: phase = "CLEARING"; break;
+    case WavePhase::Victory: phase = "COMPLETE"; break;
+    case WavePhase::Defeat: phase = "BREACHED"; break;
     }
+    text_.draw(camera, "WAVE " + std::to_string(waves_.waveNumber()) + " / 3",
+               {365, 22}, 21, {1.0f, 0.85f, 0.43f, 1}, UIFont::Heading);
+    text_.draw(camera, phase, {365, 53}, 15,
+               {1.0f, 0.93f, 0.76f, 1});
+    const int total = waves_.phase() == WavePhase::Ready
+            ? 3 : waves_.waveTotal();
+    text_.draw(camera, std::to_string(waves_.spawnedCount()) + " / " +
+               std::to_string(total) + " SPAWNED",
+               {365, 77}, 17, {1.0f, 0.93f, 0.76f, 1});
+    text_.draw(camera, std::to_string(enemies_.livingCount()) + " ENEMIES LEFT",
+               {365, 100}, 16, {1.0f, 0.93f, 0.76f, 1});
+    renderer_.drawRect(camera, {158, 562}, {842, 38},
+                       {0.12f, 0.07f, 0.12f, 0.88f});
+    const std::string footer = waves_.phase() == WavePhase::Ready
+            ? "Click a lane, choose a card, P to place, Enter to begin"
+            : message_;
+    text_.draw(camera, footer, {173, 570}, 17,
+               {1.0f, 0.88f, 0.55f, 1});
 }
 
 void WavePractice::reset() {
@@ -280,7 +298,7 @@ void WavePractice::openPreview() {
     message_ = "Module 5 visual preview";
 }
 
-std::string WavePractice::statusText() const {
+std::string WavePractice::statusText(bool debugControls) const {
     const char* phaseName = "Ready";
     switch (waves_.phase()) {
     case WavePhase::Ready: phaseName = "Ready"; break;
@@ -290,11 +308,12 @@ std::string WavePractice::statusText() const {
     case WavePhase::Defeat: phaseName = "Defeat"; break;
     }
     std::ostringstream out;
-    out << "F5 Wave Practice | Wave " << waves_.waveNumber() << "/3 "
+    out << "Guardians of the Sun Temple | Wave " << waves_.waveNumber() << "/3 "
         << phaseName << " " << waves_.spawnedCount() << "/"
         << waves_.waveTotal() << " spawned, " << enemies_.livingCount()
         << " alive | Sun Coins " << economy_.balance()
-        << " | Pickups " << economy_.pickupCount() << " | " << message_
-        << " | Enter start, 1-3 type, P place, K clear, T shield test, R reset";
+        << " | Pickups " << economy_.pickupCount() << " | " << message_;
+    if (debugControls)
+        out << " | Debug: K clear, T shield test, R reset";
     return out.str();
 }

@@ -36,6 +36,9 @@ add_executable(Guardians_of_the_Sun_Temple
         src/systems/EnemyManager.cpp
         src/systems/EnemySpawner.cpp
         src/systems/WaveManager.cpp
+        src/ui/MenuManager.cpp
+        src/ui/MenuRenderer.cpp
+        src/ui/TextRenderer.cpp
         src/world/Battlefield.cpp
         src/world/HomeBase.cpp
         src/world/TempleEnvironment.cpp
@@ -147,6 +150,13 @@ if (BUILD_TESTING)
     target_include_directories(economy_tests PRIVATE src)
     target_link_libraries(economy_tests PRIVATE glm::glm)
     add_test(NAME economy_tests COMMAND economy_tests)
+    add_executable(menu_tests
+            tests/menu_tests.cpp
+            src/ui/MenuManager.cpp
+    )
+    target_include_directories(menu_tests PRIVATE src)
+    target_link_libraries(menu_tests PRIVATE glm::glm)
+    add_test(NAME menu_tests COMMAND menu_tests)
     if (WIN32 AND MINGW)
         set_tests_properties(world_geometry_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
@@ -159,6 +169,8 @@ if (BUILD_TESTING)
         set_tests_properties(combat_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
         set_tests_properties(economy_tests PROPERTIES
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
+        set_tests_properties(menu_tests PROPERTIES
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${COMPILER_RUNTIME_DIR}")
     endif ()
 endif ()

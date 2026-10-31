@@ -1,24 +1,23 @@
 #include "economy/EconomyHud.h"
 
-#include <algorithm>
 #include <array>
 #include <string>
 
-#include <glm/vec4.hpp>
-
 #include "rendering/Camera2D.h"
 #include "rendering/Renderer2D.h"
+#include "ui/TextRenderer.h"
 
 namespace {
 constexpr std::array<GuardianType, 3> order{
         GuardianType::Khopesh, GuardianType::Sentinel, GuardianType::Archer};
-constexpr float firstCardX = 713.0f;
-constexpr float cardY = 13.0f;
-constexpr float cardWidth = 78.0f;
-constexpr float cardHeight = 76.0f;
-constexpr float cardStep = 88.0f;
-constexpr glm::vec4 gold{0.96f, 0.73f, 0.26f, 1.0f};
-constexpr glm::vec4 gray{0.46f, 0.43f, 0.42f, 1.0f};
+constexpr float firstCardX = 589.0f;
+constexpr float cardY = 8.0f;
+constexpr float cardWidth = 122.0f;
+constexpr float cardHeight = 134.0f;
+constexpr float cardStep = 132.0f;
+constexpr glm::vec4 gold{0.97f, 0.75f, 0.30f, 1.0f};
+constexpr glm::vec4 pale{1.0f, 0.93f, 0.75f, 1.0f};
+constexpr glm::vec4 gray{0.70f, 0.68f, 0.66f, 1.0f};
 }
 
 std::optional<GuardianType> EconomyHud::cardAt(glm::vec2 world) const {
@@ -31,52 +30,27 @@ std::optional<GuardianType> EconomyHud::cardAt(glm::vec2 world) const {
     return std::nullopt;
 }
 
-void EconomyHud::drawDigit(const Camera2D& camera, int digit,
-                           glm::vec2 position, float scale,
-                           glm::vec4 color) const {
-    constexpr std::array<int, 10> segments{
-            0b1111110, 0b0110000, 0b1101101, 0b1111001, 0b0110011,
-            0b1011011, 0b1011111, 0b1110000, 0b1111111, 0b1111011};
-    if (digit < 0 || digit > 9) return;
-    const int mask = segments[digit];
-    auto segment = [&](int bit, glm::vec2 offset, glm::vec2 size) {
-        if (mask & (1 << bit))
-            renderer_.drawRect(camera, position + offset * scale,
-                               size * scale, color);
-    };
-    segment(6, {2, 0}, {10, 2});
-    segment(5, {12, 2}, {2, 9});
-    segment(4, {12, 13}, {2, 9});
-    segment(3, {2, 22}, {10, 2});
-    segment(2, {0, 13}, {2, 9});
-    segment(1, {0, 2}, {2, 9});
-    segment(0, {2, 11}, {10, 2});
-}
-
-void EconomyHud::drawNumber(const Camera2D& camera, int value,
-                            glm::vec2 position, float scale,
-                            glm::vec4 color) const {
-    const std::string digits = std::to_string(std::max(0, value));
-    for (std::size_t i = 0; i < digits.size(); ++i)
-        drawDigit(camera, digits[i] - '0',
-                  position + glm::vec2(static_cast<float>(i) * 17.0f * scale,
-                                       0.0f), scale, color);
+bool EconomyHud::contains(glm::vec2 world) const {
+    return world.x >= 158.0f && world.x <= 1000.0f &&
+           world.y >= 0.0f && world.y <= 146.0f;
 }
 
 void EconomyHud::render(const Camera2D& camera,
                         const EconomySnapshot& economy, GuardianType selected,
                         std::optional<GuardianType> hovered) const {
-    renderer_.drawRect(camera, {160, 10}, {182, 58},
-                       {0.11f, 0.08f, 0.14f, 0.91f});
-    renderer_.drawRect(camera, {164, 14}, {174, 50},
-                       {0.43f, 0.29f, 0.15f, 0.78f});
-    renderer_.drawRect(camera, {175, 29}, {24, 24}, gold, 45.0f);
-    renderer_.drawRect(camera, {180, 34}, {14, 14},
-                       {1.0f, 0.93f, 0.55f, 1.0f}, 45.0f);
-    drawNumber(camera, economy.balance, {215, 24}, 1.25f, gold);
+    renderer_.drawRect(camera, {157, 0}, {843, 147},
+                       {0.10f, 0.07f, 0.13f, 0.80f});
+    renderer_.drawRect(camera, {163, 10}, {177, 126},
+                       {0.92f, 0.67f, 0.31f, 0.9f});
+    renderer_.drawRect(camera, {166, 13}, {171, 120},
+                       {0.20f, 0.13f, 0.17f, 0.97f});
+    text_.draw(camera, "SUN COINS", {178, 23}, 18, gold, UIFont::Heading);
+    renderer_.drawRect(camera, {179, 61}, {25, 25}, gold, 45.0f);
+    renderer_.drawRect(camera, {185, 67}, {13, 13}, pale, 45.0f);
+    text_.draw(camera, std::to_string(economy.balance), {220, 55}, 35, pale);
+    text_.draw(camera, "PICKUPS  " + std::to_string(economy.pickupCount),
+               {178, 102}, 15, gold);
 
-    renderer_.drawRect(camera, {704, 7}, {276, 89},
-                       {0.1f, 0.07f, 0.13f, 0.92f});
     for (int i = 0; i < 3; ++i) {
         const GuardianType type = order[i];
         const CardState state = economy.cards[static_cast<int>(type)];
@@ -84,34 +58,44 @@ void EconomyHud::render(const Camera2D& camera,
         const bool isSelected = type == selected && state.available;
         const bool isHovered = hovered == type && state.available;
         const glm::vec4 border = state.available
-                ? (isSelected || isHovered
-                        ? glm::vec4(1.0f, 0.94f, 0.54f, 1.0f) : gold)
-                : gray;
+                ? (isSelected || isHovered ? pale : gold) : gray;
         renderer_.drawRect(camera, {x, cardY}, {cardWidth, cardHeight}, border);
         renderer_.drawRect(camera, {x + 3, cardY + 3},
                            {cardWidth - 6, cardHeight - 6},
                            state.available
-                                   ? glm::vec4(0.33f, 0.21f, 0.16f, 1.0f)
-                                   : glm::vec4(0.22f, 0.21f, 0.22f, 1.0f));
-        const glm::vec4 emblem = state.available ? gold : gray;
+                                   ? glm::vec4{0.36f, 0.22f, 0.18f, 1.0f}
+                                   : glm::vec4{0.23f, 0.22f, 0.23f, 1.0f});
+        const glm::vec4 ink = state.available ? gold : gray;
+        renderer_.drawRect(camera, {x + 8, 18}, {19, 19}, ink, 45.0f);
+        text_.draw(camera, std::to_string(i + 1), {x + 13, 19}, 13,
+                   state.available ? glm::vec4{0.22f, 0.13f, 0.13f, 1} :
+                                     glm::vec4{0.12f, 0.12f, 0.12f, 1});
         if (type == GuardianType::Khopesh) {
-            renderer_.drawRect(camera, {x + 34, 27}, {7, 28}, emblem, 24.0f);
-            renderer_.drawRect(camera, {x + 21, 22}, {22, 5}, emblem, -18.0f);
-            renderer_.drawRect(camera, {x + 19, 22}, {5, 12}, emblem, 14.0f);
+            renderer_.drawRect(camera, {x + 58, 21}, {7, 31}, ink, 24.0f);
+            renderer_.drawRect(camera, {x + 45, 18}, {22, 5}, ink, -18.0f);
+            renderer_.drawRect(camera, {x + 44, 19}, {5, 12}, ink, 14.0f);
         } else if (type == GuardianType::Sentinel) {
-            renderer_.drawRect(camera, {x + 25, 25}, {28, 33}, emblem);
-            renderer_.drawRect(camera, {x + 30, 30}, {18, 22},
-                               state.available
-                                       ? glm::vec4(0.33f, 0.21f, 0.16f, 1.0f)
-                                       : glm::vec4(0.22f, 0.21f, 0.22f, 1.0f));
-            renderer_.drawRect(camera, {x + 36, 27}, {6, 28}, emblem);
+            renderer_.drawRect(camera, {x + 46, 19}, {29, 34}, ink);
+            renderer_.drawRect(camera, {x + 51, 24}, {19, 23},
+                               {0.27f, 0.22f, 0.22f, 1});
+            renderer_.drawRect(camera, {x + 58, 21}, {5, 28}, ink);
         } else {
-            renderer_.drawRect(camera, {x + 27, 29}, {5, 29}, emblem, -20.0f);
-            renderer_.drawRect(camera, {x + 45, 29}, {5, 29}, emblem, 20.0f);
-            renderer_.drawRect(camera, {x + 27, 42}, {27, 3}, emblem);
+            renderer_.drawRect(camera, {x + 49, 22}, {5, 31}, ink, -20.0f);
+            renderer_.drawRect(camera, {x + 70, 22}, {5, 31}, ink, 20.0f);
+            renderer_.drawRect(camera, {x + 48, 37}, {27, 3}, ink);
         }
-        drawNumber(camera, guardianStats(type).cost,
-                   {x + 26, 66}, 0.62f, emblem);
-        drawNumber(camera, i + 1, {x + 7, 18}, 0.5f, emblem);
+        const char* first = type == GuardianType::Khopesh ? "KHOPESH" :
+                            type == GuardianType::Sentinel ? "STONE" : "SUN";
+        const char* second = type == GuardianType::Khopesh ? "GUARDIAN" :
+                             type == GuardianType::Sentinel ? "SENTINEL" : "ARCHER";
+        text_.draw(camera, first, {x + 9, 59}, 16, ink, UIFont::Heading);
+        text_.draw(camera, second, {x + 9, 76}, 15, ink, UIFont::Heading);
+        text_.draw(camera, std::to_string(guardianStats(type).cost) + " COINS",
+                   {x + 9, 96}, 15, ink);
+        const char* status = !state.eligible ? "LOCKED" :
+                             !state.affordable ? "NEED COINS" :
+                             isSelected ? "SELECTED" : "AVAILABLE";
+        text_.draw(camera, status, {x + 9, 115}, 13,
+                   state.available ? pale : gray);
     }
 }

@@ -14,19 +14,23 @@ class Camera2D;
 class InputManager;
 class Renderer2D;
 class Battlefield;
+class TextRenderer;
 
-// Temporary playable view for checking Module 5 before final menus/economy.
 class WavePractice final {
 public:
-    WavePractice(const Battlefield& battlefield, const Renderer2D& renderer);
+    WavePractice(const Battlefield& battlefield, const Renderer2D& renderer,
+                 const TextRenderer& text);
 
-    void handleInput(const InputManager& input, const Camera2D& camera);
+    void handleInput(const InputManager& input, const Camera2D& camera,
+                     bool debugControls);
     void update(float deltaTime, const InputManager& input);
     void render(const Camera2D& camera) const;
     void reset();
     void openPreview();
+    [[nodiscard]] bool uiContains(glm::vec2 world) const;
+    [[nodiscard]] WavePhase phase() const { return waves_.phase(); }
 
-    [[nodiscard]] std::string statusText() const;
+    [[nodiscard]] std::string statusText(bool debugControls = false) const;
 
 private:
     [[nodiscard]] int inputLane() const;
@@ -35,6 +39,7 @@ private:
 
     const Battlefield& battlefield_;
     const Renderer2D& renderer_;
+    const TextRenderer& text_;
     CharacterRenderer characters_;
     GuardianManager guardians_;
     EnemyManager enemies_;

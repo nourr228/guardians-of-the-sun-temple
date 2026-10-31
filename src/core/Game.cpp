@@ -20,6 +20,8 @@
 #include "rendering/Renderer2D.h"
 #include "rendering/ResourceManager.h"
 #include "rendering/SpriteRenderer.h"
+#include "ui/MenuRenderer.h"
+#include "ui/TextRenderer.h"
 #include "world/Battlefield.h"
 #include "world/HomeBase.h"
 #include "world/TempleEnvironment.h"
@@ -34,9 +36,11 @@ Game::Game() = default;
 
 Game::~Game() {
     // Release GPU objects while the context is still current.
+    menuRenderer_.reset();
     showcase_.reset();
     practice_.reset();
     wavePractice_.reset();
+    text_.reset();
     environment_.reset();
     battlefield_.reset();
     homeBase_.reset();
@@ -128,27 +132,37 @@ void Game::initialize() {
     resources_->loadTexture("sun_crystal", assets / "textures/sun_crystal.png");
     renderer_ = std::make_unique<Renderer2D>(shader);
     sprites_ = std::make_unique<SpriteRenderer>(*renderer_);
+    text_ = std::make_unique<TextRenderer>(assets);
+    menuRenderer_ = std::make_unique<MenuRenderer>(*renderer_, *text_);
     battlefield_ = std::make_unique<Battlefield>();
     homeBase_ = std::make_unique<HomeBase>();
     environment_ = std::make_unique<TempleEnvironment>();
     environment_->loadAssets(*resources_, assets);
     showcase_ = std::make_unique<CharacterShowcase>(*renderer_);
     practice_ = std::make_unique<GuardianPractice>(*battlefield_, *renderer_);
-    wavePractice_ = std::make_unique<WavePractice>(*battlefield_, *renderer_);
+    wavePractice_ = std::make_unique<WavePractice>(*battlefield_, *renderer_,
+                                                   *text_);
     if (std::getenv("GOST_PRACTICE_PREVIEW") != nullptr) {
+        menus_.activate(MenuAction::Start);
+        debugControls_ = true;
         practiceVisible_ = true;
         practice_->openPreview();
     }
     if (std::getenv("GOST_WAVE_PREVIEW") != nullptr) {
+        menus_.activate(MenuAction::Start);
+        debugControls_ = true;
         wavePracticeVisible_ = true;
         practiceVisible_ = false;
         wavePractice_->openPreview();
     }
     if (std::getenv("GOST_ECONOMY_PREVIEW") != nullptr) {
+        menus_.activate(MenuAction::Start);
+        debugControls_ = true;
         wavePracticeVisible_ = true;
         practiceVisible_ = false;
     }
     if (const char* state = std::getenv("GOST_PREVIEW_STATE")) {
+        menus_.activate(MenuAction::Start);
         const int stateIndex = std::atoi(state);
         if (stateIndex >= 0 && stateIndex <= 6) {
             int damageStep = 0;
@@ -162,35 +176,95 @@ void Game::initialize() {
             }
         }
     }
+    if (const char* state = std::getenv("GOST_UI_PREVIEW")) {
+        const std::string requested = state;
+        if (requested == "play" || requested == "pause" ||
+            requested == "win" || requested == "lose") {
+            menus_.activate(MenuAction::Start);
+            wavePracticeVisible_ = true;
+            if (requested == "pause") menus_.escape();
+            if (requested == "win" || requested == "lose")
+                menus_.finish(requested == "win");
+        }
+    }
 }
 
 void Game::update(float deltaTime) {
-    if (input_->keyPressed(GLFW_KEY_ESCAPE)) paused_ = !paused_;
+    if (input_->keyPressed(GLFW_KEY_ESCAPE)) menus_.escape();
+    const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
+    if (!menus_.isPlaying()) {
+        battlefield_->updateHover({-1, -1});
+        if (input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
+            if (const auto button = menus_.buttonAt(mouse)) {
+                const MenuAction action = button->action;
+                menus_.activate(action);
+                if (action == MenuAction::Start || action == MenuAction::Restart) {
+                    wavePractice_->reset();
+                    battlefield_->clearSelections();
+                    practiceVisible_ = false;
+                    wavePracticeVisible_ = true;
+                    debugControls_ = false;
+                } else if (action == MenuAction::MainMenu) {
+                    wavePractice_->reset();
+                    battlefield_->clearSelections();
+                    practiceVisible_ = false;
+                    wavePracticeVisible_ = false;
+                    debugControls_ = false;
+                } else if (action == MenuAction::Exit) {
+                    glfwSetWindowShouldClose(window_, GLFW_TRUE);
+                }
+            }
+        }
+        if (menus_.screen() == GameScreen::MainMenu)
+            environment_->update(deltaTime);
+        const std::string title = menus_.screen() == GameScreen::MainMenu
+                ? "Guardians of the Sun Temple - Main Menu"
+                : menus_.screen() == GameScreen::Paused
+                ? "Guardians of the Sun Temple - Paused"
+                : menus_.screen() == GameScreen::Victory
+                ? "Guardians of the Sun Temple - Victory"
+                : menus_.screen() == GameScreen::Defeat
+                ? "Guardians of the Sun Temple - Defeat"
+                : "Guardians of the Sun Temple";
+        if (title != windowTitle_) {
+            windowTitle_ = title;
+            glfwSetWindowTitle(window_, title.c_str());
+        }
+        return;
+    }
     if (input_->keyPressed(GLFW_KEY_F4)) {
         practiceVisible_ = !practiceVisible_;
-        if (practiceVisible_) wavePracticeVisible_ = false;
+        if (practiceVisible_) {
+            wavePracticeVisible_ = false;
+            debugControls_ = true;
+        }
     }
     if (input_->keyPressed(GLFW_KEY_F5)) {
         wavePracticeVisible_ = !wavePracticeVisible_;
-        if (wavePracticeVisible_) practiceVisible_ = false;
+        if (wavePracticeVisible_) {
+            practiceVisible_ = false;
+            debugControls_ = true;
+        }
     }
     if (!practiceVisible_ && !wavePracticeVisible_)
         showcase_->handleInput(*input_);
-    const glm::vec2 mouse = input_->mouseWorldPosition(*camera_);
-    battlefield_->updateHover(mouse);
-    if (!paused_ && input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
+    const bool overHud = wavePracticeVisible_ && wavePractice_->uiContains(mouse);
+    battlefield_->updateHover(overHud ? glm::vec2{-1, -1} : mouse);
+    if (!overHud && input_->mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
         battlefield_->toggleSelectionAt(mouse);
     }
-    if (!paused_) {
-        if (practiceVisible_) practice_->handleInput(*input_, *camera_);
-        if (wavePracticeVisible_) wavePractice_->handleInput(*input_, *camera_);
-        environment_->update(deltaTime);
-        if (practiceVisible_) practice_->update(deltaTime, *input_);
-        else if (wavePracticeVisible_) wavePractice_->update(deltaTime, *input_);
-        else showcase_->update(deltaTime);
-    }
+    if (practiceVisible_) practice_->handleInput(*input_, *camera_);
+    if (wavePracticeVisible_)
+        wavePractice_->handleInput(*input_, *camera_, debugControls_);
+    environment_->update(deltaTime);
+    if (practiceVisible_) practice_->update(deltaTime, *input_);
+    else if (wavePracticeVisible_) {
+        wavePractice_->update(deltaTime, *input_);
+        if (wavePractice_->phase() == WavePhase::Victory) menus_.finish(true);
+        else if (wavePractice_->phase() == WavePhase::Defeat) menus_.finish(false);
+    } else showcase_->update(deltaTime);
     const std::string nextTitle = practiceVisible_ ? practice_->statusText()
-            : wavePracticeVisible_ ? wavePractice_->statusText()
+            : wavePracticeVisible_ ? wavePractice_->statusText(debugControls_)
             : showcase_->statusText();
     if (nextTitle != windowTitle_) {
         windowTitle_ = nextTitle;
@@ -212,17 +286,10 @@ void Game::render() const {
     homeBase_->render(*camera_, *renderer_, *sprites_, *resources_,
                       environment_->elapsedSeconds());
     environment_->renderForeground(*camera_, *renderer_, *sprites_, *resources_);
-    if (practiceVisible_) practice_->render(*camera_);
-    else if (wavePracticeVisible_) wavePractice_->render(*camera_);
-    else showcase_->render(*camera_, *battlefield_);
-
-    if (paused_) {
-        renderer_->drawRect(*camera_, {0, 0},
-                            {Battlefield::worldWidth, Battlefield::worldHeight},
-                            {0.05f, 0.02f, 0.09f, 0.46f});
-        renderer_->drawRect(*camera_, {467, 249}, {20, 96},
-                            {1.0f, 0.81f, 0.33f, 1});
-        renderer_->drawRect(*camera_, {513, 249}, {20, 96},
-                            {1.0f, 0.81f, 0.33f, 1});
+    if (menus_.screen() != GameScreen::MainMenu) {
+        if (practiceVisible_) practice_->render(*camera_);
+        else if (wavePracticeVisible_) wavePractice_->render(*camera_);
+        else showcase_->render(*camera_, *battlefield_);
     }
+    menuRenderer_->render(*camera_, menus_, input_->mouseWorldPosition(*camera_));
 }

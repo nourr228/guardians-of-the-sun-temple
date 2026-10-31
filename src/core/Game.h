@@ -5,6 +5,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "ui/MenuManager.h"
+
 class Camera2D;
 class InputManager;
 class Renderer2D;
@@ -16,6 +18,8 @@ class TempleEnvironment;
 class CharacterShowcase;
 class GuardianPractice;
 class WavePractice;
+class TextRenderer;
+class MenuRenderer;
 
 class Game {
 public:
@@ -45,8 +49,11 @@ private:
     std::unique_ptr<CharacterShowcase> showcase_;
     std::unique_ptr<GuardianPractice> practice_;
     std::unique_ptr<WavePractice> wavePractice_;
+    std::unique_ptr<TextRenderer> text_;
+    std::unique_ptr<MenuRenderer> menuRenderer_;
+    MenuManager menus_;
     std::string windowTitle_;
-    bool paused_ = false;
     bool practiceVisible_ = false;
     bool wavePracticeVisible_ = false;
+    bool debugControls_ = false;
 };
