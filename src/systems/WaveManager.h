@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "systems/EnemySpawner.h"
 
 class EnemyManager;
+class GuardianManager;
 
 enum class WavePhase { Ready, Spawning, Clearing, Victory, Defeat };
 
@@ -12,7 +14,7 @@ class WaveManager {
 public:
     explicit WaveManager(std::uint32_t seed = 0x5A17u);
 
-    void start(EnemyManager& enemies);
+    void start(EnemyManager& enemies, const GuardianManager* guardians = nullptr);
     void update(float deltaTime, EnemyManager& enemies);
     void markDefeat();
     void reset(std::uint32_t seed = 0x5A17u);
@@ -23,7 +25,7 @@ public:
     [[nodiscard]] int waveTotal() const { return spawner_.totalCount(); }
 
 private:
-    void beginWave(EnemyManager& enemies);
+    void beginWave(EnemyManager& enemies, std::vector<int> eligibleLanes = {});
 
     EnemySpawner spawner_;
     WavePhase phase_ = WavePhase::Ready;

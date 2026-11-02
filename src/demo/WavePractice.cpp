@@ -124,7 +124,7 @@ void WavePractice::handleInput(const InputManager& input,
             if (shieldScenario_) {
                 message_ = "Press R to reset before starting waves";
             } else {
-                waves_.start(enemies_);
+                waves_.start(enemies_, &guardians_);
                 message_ = "Wave 1 started";
                 audio_.play(SoundCue::Select);
             }

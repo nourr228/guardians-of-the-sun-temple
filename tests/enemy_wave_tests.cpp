@@ -1,4 +1,7 @@
 #include <cassert>
+#include <algorithm>
+#include <array>
+#include <set>
 #include <stdexcept>
 
 #include "combat/CombatSystem.h"
@@ -15,6 +18,18 @@ int livingType(const EnemyManager& enemies, EnemyType type) {
     for (const Enemy& enemy : enemies.enemies())
         if (enemy.alive && enemy.type == type) ++count;
     return count;
+}
+void assertBalancedLanes(const EnemyManager& enemies, int first, int count) {
+    std::array<int, Battlefield::laneCount> laneCounts{};
+    for (int i = first; i < first + count; ++i) {
+        const int lane = enemies.enemies()[i].laneId;
+        ++laneCounts[lane];
+        if (i > first)
+            assert(lane != enemies.enemies()[i - 1].laneId);
+    }
+    const auto [lowest, highest] =
+            std::minmax_element(laneCounts.begin(), laneCounts.end());
+    assert(*highest - *lowest <= 1);
 }
 }
 
@@ -54,6 +69,7 @@ int main() {
     assert(waves.phase() == WavePhase::Clearing);
     assert(waves.spawnedCount() == 3);
     assert(livingType(waveEnemies, EnemyType::Scarab) == 3);
+    assertBalancedLanes(waveEnemies, 0, 3);
     const auto first = waveEnemies.enemies()[0].id;
     const auto second = waveEnemies.enemies()[1].id;
     waveEnemies.applyDamage(first, 100);
@@ -67,6 +83,7 @@ int main() {
     assert(waves.spawnedCount() == 5);
     assert(livingType(waveEnemies, EnemyType::Scarab) == 3);
     assert(livingType(waveEnemies, EnemyType::Serpent) == 2);
+    assertBalancedLanes(waveEnemies, 3, 5);
     eliminateAll(waveEnemies);
     waves.update(0.0f, waveEnemies);
     assert(waves.waveNumber() == 3 && waves.spawnedCount() == 1);
@@ -75,6 +92,12 @@ int main() {
     assert(livingType(waveEnemies, EnemyType::Scarab) == 4);
     assert(livingType(waveEnemies, EnemyType::Serpent) == 3);
     assert(livingType(waveEnemies, EnemyType::Pharaoh) == 3);
+    assertBalancedLanes(waveEnemies, 8, 10);
+    std::set<int> pharaohLanes;
+    for (std::size_t i = 8; i < waveEnemies.enemies().size(); ++i)
+        if (waveEnemies.enemies()[i].type == EnemyType::Pharaoh)
+            pharaohLanes.insert(waveEnemies.enemies()[i].laneId);
+    assert(pharaohLanes.size() == 3);
     for (const Enemy& enemy : waveEnemies.enemies())
         assert(enemy.laneId >= 0 && enemy.laneId < Battlefield::laneCount);
     eliminateAll(waveEnemies);
@@ -92,6 +115,39 @@ int main() {
     for (std::size_t i = 0; i < waveEnemies.enemies().size(); ++i) {
         assert(waveEnemies.enemies()[i].type == copyEnemies.enemies()[i].type);
         assert(waveEnemies.enemies()[i].laneId == copyEnemies.enemies()[i].laneId);
+    }
+    EnemyManager preparedEnemies(field);
+    GuardianManager preparedGuardians(field);
+    for (int lane : {0, 1, 3})
+        preparedGuardians.guardians().emplace_back(
+                static_cast<std::uint64_t>(lane + 1), GuardianType::Khopesh,
+                lane, field.guardianEntry(lane));
+    WaveManager preparedWave(1234);
+    preparedWave.start(preparedEnemies, &preparedGuardians);
+    preparedWave.update(5.0f, preparedEnemies);
+    std::set<int> openingLanes;
+    for (const Enemy& enemy : preparedEnemies.enemies())
+        openingLanes.insert(enemy.laneId);
+    assert(openingLanes == (std::set<int>{0, 1, 3}));
+    for (std::uint32_t seed = 0; seed < 128; ++seed) {
+        EnemyManager variedEnemies(field);
+        WaveManager variedWave(seed);
+        variedWave.start(variedEnemies);
+        variedWave.update(5.0f, variedEnemies);
+        assertBalancedLanes(variedEnemies, 0, 3);
+        eliminateAll(variedEnemies);
+        variedWave.update(0.0f, variedEnemies);
+        variedWave.update(9.0f, variedEnemies);
+        assertBalancedLanes(variedEnemies, 3, 5);
+        eliminateAll(variedEnemies);
+        variedWave.update(0.0f, variedEnemies);
+        variedWave.update(20.0f, variedEnemies);
+        assertBalancedLanes(variedEnemies, 8, 10);
+        std::set<int> eliteLanes;
+        for (std::size_t i = 8; i < variedEnemies.enemies().size(); ++i)
+            if (variedEnemies.enemies()[i].type == EnemyType::Pharaoh)
+                eliteLanes.insert(variedEnemies.enemies()[i].laneId);
+        assert(eliteLanes.size() == 3);
     }
     waves.markDefeat();
     assert(waves.phase() == WavePhase::Defeat);

@@ -13,7 +13,8 @@ public:
     explicit EnemySpawner(std::uint32_t seed = 0x5A17u);
 
     void reset(std::uint32_t seed);
-    void configure(std::vector<EnemyType> population, float intervalSeconds);
+    void configure(std::vector<EnemyType> population, float intervalSeconds,
+                   std::vector<int> eligibleLanes = {});
     void spawnFirst(EnemyManager& enemies);
     void update(float deltaTime, EnemyManager& enemies);
 
@@ -28,6 +29,7 @@ private:
 
     std::mt19937 random_;
     std::vector<EnemyType> population_;
+    std::vector<int> lanePlan_;
     int next_ = 0;
     float intervalSeconds_ = 2.2f;
     float untilNext_ = 0.0f;
